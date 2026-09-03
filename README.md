@@ -2,7 +2,7 @@
 
 みんアプで配布する個別アプリのソースを管理するリポジトリです。
 
-`kaeruko/minapp` 本体からアプリ実装を分離し、このリポジトリを個別アプリの source of truth とします。
+`kaeruko/minapp` 本体からアプリ実装を分離し、このリポジトリをみんアプショップ等で配布する個別アプリの source of truth とします。
 
 ## Layout
 
@@ -11,5 +11,6 @@
 - `shopping_town/`
 - `ol_home/`
 - `novel_starter/`
+- `sing_along/` - 「うたってみよう」BGM付き録音アプリ
 
-`kaeruko/minapp` からは `apps/mobile/assets/builtin` に submodule として配置して利用します。
+ビルトインとして本体へ同梱するアプリは `kaeruko/minapp` 側で別途管理します。このリポジトリ全体を submodule として本体へ組み込む前提にはしません。
