@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OLさん おうちにかえる</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+      --night-1: #24345d;
+      --night-2: #4f5d8a;
+      --night-3: #c77d78;
+      --wall: #4c5268;
+      --frame: #2e3446;
+      --frame-light: #8991ad;
+      --panel: #fff8ef;
+      --text: #5f4a43;
+      --yellow: #ffd86a;
+      --pink: #ff9bc5;
+      --blue: #8fd3ff;
+      --green: #9de07e;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--night-1);
+      color: var(--text);
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button { font: inherit; }
+
+    .game {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 560px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 12% 13%, #fff 0 1px, transparent 2px),
+        radial-gradient(circle at 30% 8%, #fff 0 1px, transparent 2px),
+        radial-gradient(circle at 68% 12%, #fff 0 1px, transparent 2px),
+        radial-gradient(circle at 87% 18%, #fff 0 1px, transparent 2px),
+        linear-gradient(var(--night-1) 0 16%, var(--night-2) 58%, var(--night-3));
+    }
+
+    .moon {
+      position: absolute;
+      top: 54px;
+      right: 24px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #fff4cf;
+      box-shadow: 0 0 26px #fff0b875;
+      opacity: .85;
+      pointer-events: none;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 40;
+      top: max(8px, env(safe-area-inset-top));
+      left: 10px;
+      right: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .title {
+      min-width: 0;
+      padding: 8px 12px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      background: #fff8efe8;
+      box-shadow: 0 4px 0 #725768;
+      font-weight: 1000;
+      font-size: clamp(15px, 4.5vw, 21px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress-pill {
+      padding: 8px 11px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      background: #fff8efe8;
+      box-shadow: 0 4px 0 #725768;
+      font-weight: 1000;
+      white-space: nowrap;
+    }
+
+    .play-area {
+      position: absolute;
+      z-index: 10;
+      top: max(62px, calc(env(safe-area-inset-top) + 54px));
+      left: 0;
+      right: 0;
+      bottom: 124px;
+      display: grid;
+      place-items: center;
+      padding: 8px 10px;
+    }
+
+    .building {
+      position: relative;
+      width: min(94vw, 590px, calc((100dvh - 205px) * .8));
+      max-width: 94%;
+      aspect-ratio: 4 / 5;
+      min-width: 270px;
+      overflow: visible;
+      border: 7px solid #d9d5da;
+      border-radius: 18px 18px 8px 8px;
+      background:
+        linear-gradient(90deg, transparent 49.5%, #363b4d 49.5% 50.5%, transparent 50.5%),
+        linear-gradient(var(--wall), #42475c);
+      box-shadow:
+        0 10px 0 #303548,
+        0 24px 45px #1a1c2f55;
+    }
+
+    .building::before {
+      content: "";
+      position: absolute;
+      left: 11%;
+      right: 11%;
+      top: -18px;
+      height: 18px;
+      border-radius: 10px 10px 0 0;
+      background: #5d647c;
+      border: 5px solid #d9d5da;
+      border-bottom: 0;
+    }
+
+    .home-marker {
+      position: absolute;
+      z-index: 9;
+      top: 1.8%;
+      right: 1.8%;
+      width: 11%;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 3px solid #fff;
+      border-radius: 13px;
+      background: #fff3d6;
+      box-shadow: 0 4px 0 #a67f5e;
+      font-size: clamp(22px, 7vw, 38px);
+      transform: rotate(2deg);
+    }
+
+    .home-marker::after {
+      content: "おうち";
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 3px;
+      padding: 2px 5px;
+      border-radius: 999px;
+      background: #fff8efea;
+      color: #6f554b;
+      font-size: 9px;
+      font-weight: 1000;
+      white-space: nowrap;
+    }
+
+    .window-board {
+      position: absolute;
+      inset: 6.5% 5% 5%;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      gap: clamp(4px, 1.1vw, 8px);
+    }
+
+    .window {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      border: clamp(2px, .7vw, 4px) solid var(--frame-light);
+      border-radius: clamp(4px, 1.2vw, 8px);
+      background: #2b3040;
+      box-shadow:
+        inset 0 0 0 2px var(--frame),
+        0 3px 0 #272b3b;
+      cursor: pointer;
+      touch-action: manipulation;
+      outline: none;
+    }
+
+    .window::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #ffffff55;
+      transform: translateX(-50%);
+    }
+
+    .window.yellow { background: var(--yellow); box-shadow: inset 0 0 0 2px var(--frame), 0 0 12px #ffe99099, 0 3px 0 #272b3b; }
+    .window.pink { background: var(--pink); box-shadow: inset 0 0 0 2px var(--frame), 0 0 12px #ffb7d299, 0 3px 0 #272b3b; }
+    .window.blue { background: var(--blue); box-shadow: inset 0 0 0 2px var(--frame), 0 0 12px #b0e4ff99, 0 3px 0 #272b3b; }
+    .window.green { background: var(--green); box-shadow: inset 0 0 0 2px var(--frame), 0 0 12px #b9f0a599, 0 3px 0 #272b3b; }
+
+    .window.selected {
+      outline: 4px solid #fff;
+      outline-offset: 2px;
+      transform: scale(.93);
+    }
+
+    .window.hint-cell {
+      animation: hintPulse .55s ease-in-out infinite alternate;
+    }
+
+    .window.route {
+      z-index: 3;
+      outline: 4px solid #fff8cc;
+      outline-offset: 2px;
+      animation: routeGlow .38s ease-in-out infinite alternate;
+    }
+
+    .window.bad-swap {
+      animation: badSwap .14s linear 3;
+    }
+
+    @keyframes hintPulse {
+      to { transform: scale(.88); filter: brightness(1.25); }
+    }
+
+    @keyframes routeGlow {
+      to { transform: scale(1.08); filter: brightness(1.25); }
+    }
+
+    @keyframes badSwap {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(4px); }
+    }
+
+    .ol {
+      position: absolute;
+      z-index: 12;
+      width: clamp(31px, 8vw, 48px);
+      height: clamp(31px, 8vw, 48px);
+      display: grid;
+      place-items: center;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: #fff7e8;
+      box-shadow: 0 4px 0 #885d59, 0 0 15px #fff2b599;
+      font-size: clamp(22px, 6vw, 34px);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transition:
+        left 180ms ease,
+        top 180ms ease;
+    }
+
+    .ol.hopping {
+      animation: hop .18s ease-in-out;
+    }
+
+    @keyframes hop {
+      50% { transform: translate(-50%, -62%) scale(1.08); }
+    }
+
+    .message {
+      position: absolute;
+      z-index: 30;
+      left: 50%;
+      bottom: 8px;
+      width: min(88%, 460px);
+      transform: translateX(-50%);
+      padding: 7px 11px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      background: #fff8efed;
+      box-shadow: 0 4px 0 #7c5d63;
+      text-align: center;
+      font-size: clamp(11px, 3.2vw, 14px);
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    .controls {
+      position: absolute;
+      z-index: 35;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 124px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+      border-top: 5px solid #e9d6d2;
+      background: #9c7274;
+      box-shadow: 0 -5px 0 #6f515b;
+    }
+
+    .control {
+      min-width: 0;
+      border: 4px solid #fff;
+      border-radius: 23px;
+      color: #fff;
+      font-size: clamp(17px, 4.8vw, 24px);
+      font-weight: 1000;
+      background: #708fd0;
+      box-shadow: 0 6px 0 #4966a0;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .control.shuffle {
+      background: #d9828f;
+      box-shadow: 0 6px 0 #975461;
+    }
+
+    .control:active:not(:disabled) {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #604b55;
+    }
+
+    .control:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+
+    .overlay {
+      position: absolute;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: #25243a80;
+      backdrop-filter: blur(4px);
+    }
+
+    .card {
+      width: min(92%, 450px);
+      padding: 23px 19px;
+      border: 5px solid #fff;
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 10px 0 #a96e61;
+      text-align: center;
+    }
+
+    .card h1 {
+      margin: 0 0 10px;
+      color: #765247;
+      font-size: clamp(27px, 7.8vw, 39px);
+      line-height: 1.15;
+    }
+
+    .card p {
+      margin: 9px 0 18px;
+      font-size: clamp(14px, 4vw, 18px);
+      font-weight: 800;
+      line-height: 1.65;
+    }
+
+    .start {
+      min-width: 190px;
+      min-height: 54px;
+      border: 0;
+      border-radius: 999px;
+      background: #e98872;
+      box-shadow: 0 6px 0 #a45745;
+      color: #fff;
+      font-size: 19px;
+      font-weight: 1000;
+      cursor: pointer;
+    }
+
+    .start:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #a45745;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-height: 650px) {
+      .game { min-height: 500px; }
+      .play-area { bottom: 106px; }
+      .controls { height: 106px; }
+      .building { width: min(88vw, calc((100dvh - 175px) * .8)); }
+      .message { bottom: 4px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" id="game" aria-label="OLさん おうちにかえる">
+    <div class="moon" aria-hidden="true"></div>
+
+    <div class="hud">
+      <div class="title">🌆 OLさん おうちにかえる</div>
+      <div class="progress-pill">🏠 <span id="progress">0</span>/6</div>
+    </div>
+
+    <section class="play-area">
+      <div class="building" id="building" aria-label="マンションの窓パズル">
+        <div class="home-marker" id="homeMarker" aria-hidden="true">🏠</div>
+        <div class="window-board" id="board"></div>
+        <div class="ol" id="ol" aria-label="帰宅中のOLさん">👩‍💼</div>
+      </div>
+      <div class="message" id="message">となりの窓を2つタップして、同じ色を4つそろえてね。</div>
+    </section>
+
+    <div class="controls">
+      <button class="control" id="hintButton" type="button">💡 ヒント</button>
+      <button class="control shuffle" id="shuffleButton" type="button">🔀 まぜる</button>
+    </div>
+
+    <section class="overlay" id="startOverlay">
+      <div class="card">
+        <h1>🌙 窓をそろえて<br>おうちへ</h1>
+        <p>
+          マンションいっぱいの明かりを入れ替えて、<br>
+          <strong>同じ色を4つ一直線</strong>にそろえよう。<br>
+          そろった窓をOLさんが伝って、少しずつおうちへ近づくよ。
+        </p>
+        <button class="start" id="startButton" type="button">かえる</button>
+      </div>
+    </section>
+
+    <section class="overlay hidden" id="finishOverlay">
+      <div class="card">
+        <h1>🏠 ただいま〜</h1>
+        <p>窓の明かりを伝って、おうちに着いたよ。<br>今日もおつかれさま。</p>
+        <button class="start" id="retryButton" type="button">もういちど</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const board = document.getElementById("board");
+    const building = document.getElementById("building");
+    const ol = document.getElementById("ol");
+    const homeMarker = document.getElementById("homeMarker");
+    const progressLabel = document.getElementById("progress");
+    const message = document.getElementById("message");
+    const hintButton = document.getElementById("hintButton");
+    const shuffleButton = document.getElementById("shuffleButton");
+    const startOverlay = document.getElementById("startOverlay");
+    const finishOverlay = document.getElementById("finishOverlay");
+    const startButton = document.getElementById("startButton");
+    const retryButton = document.getElementById("retryButton");
+
+    if (!board || !building || !ol || !homeMarker || !progressLabel || !message ||
+        !hintButton || !shuffleButton || !startOverlay || !finishOverlay ||
+        !startButton || !retryButton) {
+      throw new Error("OL home puzzle initialization failed: required DOM element is missing.");
+    }
+
+    const ROWS = 10;
+    const COLS = 8;
+    const GOAL_STEPS = 6;
+    const COLORS = ["yellow", "pink", "blue", "green"];
+    const DIRECTIONS = [
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [1, -1]
+    ];
+    const HOP_DELAY_MS = 175;
+    const RECOLOR_DELAY_MS = 180;
+    const BAD_SWAP_MS = 420;
+
+    const state = {
+      phase: "idle",
+      colors: [],
+      cells: [],
+      selected: null,
+      locked: false,
+      progress: 0,
+      olIndex: (ROWS - 1) * COLS,
+      hintPair: null
+    };
+
+    function indexOf(row, col) {
+      return row * COLS + col;
+    }
+
+    function rowOf(index) {
+      return Math.floor(index / COLS);
+    }
+
+    function colOf(index) {
+      return index % COLS;
+    }
+
+    function assertCellIndex(index, label) {
+      if (!Number.isInteger(index) || index < 0 || index >= ROWS * COLS) {
+        throw new RangeError(`${label} is not a valid cell index: ${index}.`);
+      }
+    }
+
+    function randomColor() {
+      return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function areAdjacent(a, b) {
+      assertCellIndex(a, "a");
+      assertCellIndex(b, "b");
+      const dr = Math.abs(rowOf(a) - rowOf(b));
+      const dc = Math.abs(colOf(a) - colOf(b));
+      return dr + dc === 1;
+    }
+
+    function swapInArray(values, a, b) {
+      const tmp = values[a];
+      values[a] = values[b];
+      values[b] = tmp;
+    }
+
+    function findRuns(values) {
+      if (!Array.isArray(values) || values.length !== ROWS * COLS) {
+        throw new Error("Window color board has invalid size.");
+      }
+
+      const runs = [];
+
+      for (let row = 0; row < ROWS; row += 1) {
+        for (let col = 0; col < COLS; col += 1) {
+          const startIndex = indexOf(row, col);
+          const color = values[startIndex];
+          if (!COLORS.includes(color)) {
+            throw new Error(`Unknown window color at ${startIndex}: ${color}.`);
+          }
+
+          for (const [dr, dc] of DIRECTIONS) {
+            const prevRow = row - dr;
+            const prevCol = col - dc;
+            if (prevRow >= 0 && prevRow < ROWS && prevCol >= 0 && prevCol < COLS) {
+              if (values[indexOf(prevRow, prevCol)] === color) {
+                continue;
+              }
+            }
+
+            const points = [];
+            let r = row;
+            let c = col;
+
+            while (r >= 0 && r < ROWS && c >= 0 && c < COLS &&
+                   values[indexOf(r, c)] === color) {
+              points.push(indexOf(r, c));
+              r += dr;
+              c += dc;
+            }
+
+            if (points.length >= 4) {
+              runs.push({ color, points });
+            }
+          }
+        }
+      }
+
+      return runs;
+    }
+
+    function possibleMoves(values) {
+      const moves = [];
+      for (let index = 0; index < values.length; index += 1) {
+        const row = rowOf(index);
+        const col = colOf(index);
+
+        for (const [dr, dc] of [[0, 1], [1, 0]]) {
+          const r = row + dr;
+          const c = col + dc;
+          if (r >= ROWS || c >= COLS) {
+            continue;
+          }
+          const other = indexOf(r, c);
+          if (values[index] === values[other]) {
+            continue;
+          }
+
+          swapInArray(values, index, other);
+          const runs = findRuns(values);
+          swapInArray(values, index, other);
+
+          if (runs.length > 0) {
+            moves.push([index, other]);
+          }
+        }
+      }
+      return moves;
+    }
+
+    function generatePlayableBoard() {
+      for (let attempt = 0; attempt < 300; attempt += 1) {
+        const values = Array.from({ length: ROWS * COLS }, randomColor);
+        if (findRuns(values).length !== 0) {
+          continue;
+        }
+        if (possibleMoves(values).length >= 3) {
+          return values;
+        }
+      }
+      throw new Error("Could not generate a playable OL home window board.");
+    }
+
+    function buildCells() {
+      board.textContent = "";
+      state.cells = [];
+
+      for (let index = 0; index < ROWS * COLS; index += 1) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "window";
+        button.setAttribute("aria-label", `窓 ${rowOf(index) + 1}行 ${colOf(index) + 1}列`);
+        button.dataset.index = String(index);
+        button.addEventListener("click", () => onCellTap(index));
+        board.appendChild(button);
+        state.cells.push(button);
+      }
+    }
+
+    function renderBoard() {
+      if (state.cells.length !== ROWS * COLS || state.colors.length !== ROWS * COLS) {
+        throw new Error("Cannot render OL home puzzle: board state size mismatch.");
+      }
+
+      for (let index = 0; index < state.cells.length; index += 1) {
+        const color = state.colors[index];
+        if (!COLORS.includes(color)) {
+          throw new Error(`Unknown render color at ${index}: ${color}.`);
+        }
+        const cell = state.cells[index];
+        cell.className = `window ${color}`;
+        if (state.selected === index) {
+          cell.classList.add("selected");
+        }
+        if (state.hintPair && state.hintPair.includes(index)) {
+          cell.classList.add("hint-cell");
+        }
+        cell.disabled = state.locked || state.phase !== "running";
+      }
+    }
+
+    function cellCenter(index) {
+      assertCellIndex(index, "cellCenter index");
+      const cell = state.cells[index];
+      if (!cell) {
+        throw new Error(`Cell element missing for index ${index}.`);
+      }
+      return {
+        left: board.offsetLeft + cell.offsetLeft + cell.offsetWidth / 2,
+        top: board.offsetTop + cell.offsetTop + cell.offsetHeight / 2
+      };
+    }
+
+    function placeOl(index, animate = false) {
+      const p = cellCenter(index);
+      state.olIndex = index;
+      ol.style.left = `${p.left}px`;
+      ol.style.top = `${p.top}px`;
+      if (animate) {
+        ol.classList.remove("hopping");
+        void ol.offsetWidth;
+        ol.classList.add("hopping");
+      }
+    }
+
+    function clearHint() {
+      state.hintPair = null;
+      for (const cell of state.cells) {
+        cell.classList.remove("hint-cell");
+      }
+    }
+
+    function chooseRunForSwap(runs, a, b) {
+      const direct = runs.find((run) => run.points.includes(a) || run.points.includes(b));
+      return direct ?? runs[0] ?? null;
+    }
+
+    function endpointCloserToHome(points) {
+      if (!Array.isArray(points) || points.length === 0) {
+        throw new Error("Cannot choose route endpoint from an empty run.");
+      }
+      const homeRow = 0;
+      const homeCol = COLS - 1;
+
+      function distance(index) {
+        return Math.abs(rowOf(index) - homeRow) + Math.abs(colOf(index) - homeCol);
+      }
+
+      const first = points[0];
+      const last = points[points.length - 1];
+      return distance(last) <= distance(first) ? last : first;
+    }
+
+    function routeOrder(run) {
+      const target = endpointCloserToHome(run.points);
+      const start = run.points[0];
+      const end = run.points[run.points.length - 1];
+
+      const currentRow = rowOf(state.olIndex);
+      const currentCol = colOf(state.olIndex);
+
+      function currentDistance(index) {
+        return Math.abs(rowOf(index) - currentRow) + Math.abs(colOf(index) - currentCol);
+      }
+
+      let ordered = [...run.points];
+      if (currentDistance(end) < currentDistance(start)) {
+        ordered.reverse();
+      }
+
+      if (ordered[ordered.length - 1] !== target) {
+        ordered.reverse();
+      }
+
+      return ordered;
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    async function animateRoute(run) {
+      state.locked = true;
+      state.selected = null;
+      clearHint();
+      renderBoard();
+
+      for (const index of run.points) {
+        state.cells[index].classList.add("route");
+      }
+
+      message.textContent = "そろった！ 明かりをつたって帰るわん…じゃなくて、帰ります♪";
+
+      const ordered = routeOrder(run);
+      for (const index of ordered) {
+        placeOl(index, true);
+        await sleep(HOP_DELAY_MS);
+      }
+
+      state.progress += 1;
+      progressLabel.textContent = String(state.progress);
+
+      if (state.progress >= GOAL_STEPS) {
+        const homeIndex = indexOf(0, COLS - 1);
+        placeOl(homeIndex, true);
+        await sleep(HOP_DELAY_MS + 80);
+        finishGame();
+        return;
+      }
+
+      for (const index of run.points) {
+        state.colors[index] = randomColor();
+        state.cells[index].classList.remove("route");
+      }
+
+      await sleep(RECOLOR_DELAY_MS);
+
+      if (findRuns(state.colors).length > 0 || possibleMoves(state.colors).length === 0) {
+        state.colors = generatePlayableBoard();
+      }
+
+      state.locked = false;
+      renderBoard();
+      message.textContent = `おうちまであと ${GOAL_STEPS - state.progress} 回。次の4つをそろえてね。`;
+    }
+
+    async function rejectSwap(a, b) {
+      state.locked = true;
+      state.cells[a].classList.add("bad-swap");
+      state.cells[b].classList.add("bad-swap");
+      message.textContent = "4つそろわなかったから、もとにもどるよ。";
+      await sleep(BAD_SWAP_MS);
+      swapInArray(state.colors, a, b);
+      state.locked = false;
+      renderBoard();
+    }
+
+    async function trySwap(a, b) {
+      if (!areAdjacent(a, b)) {
+        throw new Error("trySwap requires adjacent window cells.");
+      }
+
+      clearHint();
+      state.selected = null;
+      swapInArray(state.colors, a, b);
+      renderBoard();
+
+      const runs = findRuns(state.colors);
+      if (runs.length === 0) {
+        await rejectSwap(a, b);
+        return;
+      }
+
+      const run = chooseRunForSwap(runs, a, b);
+      if (!run) {
+        throw new Error("A successful swap produced no selectable run.");
+      }
+
+      await animateRoute(run);
+    }
+
+    function onCellTap(index) {
+      if (state.phase !== "running" || state.locked) {
+        return;
+      }
+      assertCellIndex(index, "Tapped index");
+      clearHint();
+
+      if (state.selected === null) {
+        state.selected = index;
+        renderBoard();
+        message.textContent = "もうひとつ、となりの窓をタップして入れ替えるよ。";
+        return;
+      }
+
+      if (state.selected === index) {
+        state.selected = null;
+        renderBoard();
+        message.textContent = "選択をやめたよ。";
+        return;
+      }
+
+      if (!areAdjacent(state.selected, index)) {
+        state.selected = index;
+        renderBoard();
+        message.textContent = "となり合う窓どうしなら入れ替えられるよ。";
+        return;
+      }
+
+      const first = state.selected;
+      void trySwap(first, index);
+    }
+
+    function showHint() {
+      if (state.phase !== "running" || state.locked) {
+        return;
+      }
+      const moves = possibleMoves(state.colors);
+      if (moves.length === 0) {
+        throw new Error("Playable board unexpectedly has no valid swap.");
+      }
+      state.selected = null;
+      state.hintPair = moves[0];
+      renderBoard();
+      message.textContent = "光っている2つの窓を入れ替えると、4つそろうよ。";
+    }
+
+    function shuffleBoard() {
+      if (state.phase !== "running" || state.locked) {
+        return;
+      }
+      state.selected = null;
+      state.hintPair = null;
+      state.colors = generatePlayableBoard();
+      renderBoard();
+      message.textContent = "マンションの明かりをまぜたよ。";
+    }
+
+    function resetGame() {
+      state.phase = "running";
+      state.colors = generatePlayableBoard();
+      state.selected = null;
+      state.locked = false;
+      state.progress = 0;
+      state.olIndex = indexOf(ROWS - 1, 0);
+      state.hintPair = null;
+      progressLabel.textContent = "0";
+      startOverlay.classList.add("hidden");
+      finishOverlay.classList.add("hidden");
+      renderBoard();
+
+      requestAnimationFrame(() => {
+        placeOl(state.olIndex, false);
+      });
+
+      message.textContent = "となりの窓を2つタップして、同じ色を4つそろえてね。";
+    }
+
+    function finishGame() {
+      state.phase = "finished";
+      state.locked = true;
+      renderBoard();
+      message.textContent = "おうちについたよ。おつかれさま。";
+      finishOverlay.classList.remove("hidden");
+    }
+
+    buildCells();
+    state.colors = generatePlayableBoard();
+    renderBoard();
+
+    requestAnimationFrame(() => {
+      placeOl(state.olIndex, false);
+    });
+
+    startButton.addEventListener("click", resetGame);
+    retryButton.addEventListener("click", resetGame);
+    hintButton.addEventListener("click", showHint);
+    shuffleButton.addEventListener("click", shuffleBoard);
+
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(() => placeOl(state.olIndex, false));
+    });
+  </script>
+</body>
+</html>
