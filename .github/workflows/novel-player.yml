@@ -1,20 +1,22 @@
-name: Novel Player CI
+name: Novel Player / Editor CI
 
 on:
   push:
     paths:
       - 'novel_starter/**'
+      - 'novel_editor/**'
       - '.github/workflows/novel-player.yml'
   pull_request:
     paths:
       - 'novel_starter/**'
+      - 'novel_editor/**'
       - '.github/workflows/novel-player.yml'
 
 permissions:
   contents: read
 
 jobs:
-  novel-player:
+  novel-foundation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +27,12 @@ jobs:
         run: node novel_starter/test_story_validator.js
       - name: Test Hosted runtime readiness
         run: node novel_starter/test_player_runtime_ready.js
+      - name: Test Editor Authoring contract
+        run: node novel_editor/test_editor_core.js
       - name: Check JavaScript syntax
         run: |
           node --check novel_starter/story-validator.js
           node --check novel_starter/player.js
+          node --check novel_editor/story-validator.js
+          node --check novel_editor/editor-core.js
+          node --check novel_editor/editor.js
