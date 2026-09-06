@@ -18,6 +18,7 @@ The implementation order is intentionally Player-first. The Editor is not implem
 - `index.html` — published-artifact style sample with Master Data embedded as `application/json`
 - `face.jpg` — sample character asset
 - `test_story_validator.js` — dependency-free Node checks for important validation failures
+- `test_player_runtime_ready.js` — dependency-free Hosted bridge readiness regression check
 
 ## v1 event types
 
@@ -74,7 +75,9 @@ This keeps the scenario as data rather than generating scenario-specific JavaScr
 
 The Player never falls back from private progress to shared `minapp.state`.
 
-When running inside a MinApp Host (`window.minapp` exists), it requires:
+When running inside a MinApp Host, the native JavaScript channel may exist before `window.minapp` is injected. In that case the Player stays in an explicit `ホスト接続待ち` state and waits for `minappready`; it does not silently enter standalone mode.
+
+Once the Host bridge is ready, the Player requires:
 
 ```js
 minapp.userState.get(key)
@@ -84,7 +87,7 @@ minapp.userState.delete(key)
 
 If the Host exists but does not provide `minapp.userState`, startup fails with `user_state_unavailable`.
 
-When opened as a plain standalone web page with no `window.minapp`, the sample can be played explicitly in no-save preview mode.
+When opened as a plain standalone web page with neither the Host channel nor `window.minapp`, the sample can be played explicitly in no-save preview mode.
 
 Saved progress includes:
 
@@ -120,8 +123,9 @@ No package install is required:
 
 ```bash
 node novel_starter/test_story_validator.js
+node novel_starter/test_player_runtime_ready.js
 node --check novel_starter/story-validator.js
 node --check novel_starter/player.js
 ```
 
-The next platform step is to add `minapp.userState`, audio delivery support, Runtime session renewal, and preview state isolation in `kaeruko/minapp` before building the Novel Editor UI.
+The shared Runtime/Authoring substrate now provides `minapp.userState`, audio delivery, Runtime session renewal, preview state isolation, draft/asset Authoring storage, scoped Authoring sessions, and immutable publish. The next Novel-specific step is to connect the Editor to that contract.
