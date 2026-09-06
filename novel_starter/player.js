@@ -35,7 +35,9 @@
   let eventIndex = 0;
   let currentEventId = null;
   let ended = false;
-  let runtimeMode = 'standalone';
+  let runtimeMode = 'pending';
+  let runtimeInitialized = false;
+  let controlsBound = false;
   let bgmAudio = null;
   let seAudio = null;
   let displayState = emptyDisplayState();
@@ -81,6 +83,12 @@
 
   function configureRuntime() {
     if (typeof window.minapp === 'undefined') {
+      const channel = window.MinAppNativeBridge;
+      if (channel && typeof channel.postMessage === 'function') {
+        runtimeMode = 'waiting_for_host';
+        setStatus('ホスト接続待ち');
+        return;
+      }
       runtimeMode = 'standalone';
       setStatus('単体プレビュー: セーブなし');
       return;
@@ -201,8 +209,8 @@
   function clearDialogue() {
     els.speaker.hidden = true;
     els.speaker.textContent = '';
-    els.text.textContent = '';
     els.end.hidden = true;
+    els.text.textContent = '';
     els.choices.replaceChildren();
   }
 
@@ -415,30 +423,66 @@
     }
   }
 
+  function bindControls() {
+    if (controlsBound) return;
+    controlsBound = true;
+    els.startButton.addEventListener('click', async () => {
+      try {
+        await deleteProgress();
+        await startNewGame();
+      } catch (error) {
+        fatal(error, false);
+      }
+    });
+    els.continueButton.addEventListener('click', async () => {
+      try {
+        await continueGame();
+      } catch (error) {
+        fatal(error, error && (error.code === 'incompatible_save' || error.code === 'invalid_save' || error.code === 'save_event_missing'));
+      }
+    });
+    els.resetButton.addEventListener('click', resetInvalidSaveAndStart);
+  }
+
+  async function finishRuntimeInitialization() {
+    if (runtimeInitialized) return;
+    if (runtimeMode === 'waiting_for_host' || runtimeMode === 'pending') {
+      throw Object.assign(new Error('Runtime initialization was attempted before the host bridge became ready'), { code: 'host_contract_error' });
+    }
+    runtimeInitialized = true;
+    savedProgress = await loadSavedProgress();
+    els.continueButton.hidden = savedProgress === null;
+    els.startButton.disabled = false;
+    els.continueButton.disabled = false;
+    if (runtimeMode === 'hosted') setStatus(savedProgress ? 'セーブあり' : 'はじめから');
+  }
+
+  async function onMinAppReady() {
+    if (runtimeInitialized) return;
+    try {
+      configureRuntime();
+      if (runtimeMode !== 'hosted') {
+        throw Object.assign(new Error('minappready fired without a valid hosted Runtime bridge'), { code: 'host_contract_error' });
+      }
+      await finishRuntimeInitialization();
+    } catch (error) {
+      const resettable = error && (error.code === 'incompatible_save' || error.code === 'invalid_save' || error.code === 'save_event_missing');
+      fatal(error, resettable);
+    }
+  }
+
   async function initialize() {
     try {
       story = parseStory();
       els.title.textContent = story.title;
+      bindControls();
+      els.startButton.disabled = true;
+      els.continueButton.disabled = true;
+      window.addEventListener('minappready', onMinAppReady);
       configureRuntime();
-      savedProgress = await loadSavedProgress();
-      els.continueButton.hidden = savedProgress === null;
-      if (runtimeMode === 'hosted') setStatus(savedProgress ? 'セーブあり' : 'はじめから');
-      els.startButton.addEventListener('click', async () => {
-        try {
-          await deleteProgress();
-          await startNewGame();
-        } catch (error) {
-          fatal(error, false);
-        }
-      });
-      els.continueButton.addEventListener('click', async () => {
-        try {
-          await continueGame();
-        } catch (error) {
-          fatal(error, error && (error.code === 'incompatible_save' || error.code === 'invalid_save' || error.code === 'save_event_missing'));
-        }
-      });
-      els.resetButton.addEventListener('click', resetInvalidSaveAndStart);
+      if (runtimeMode !== 'waiting_for_host') {
+        await finishRuntimeInitialization();
+      }
     } catch (error) {
       const resettable = error && (error.code === 'incompatible_save' || error.code === 'invalid_save' || error.code === 'save_event_missing');
       fatal(error, resettable);
