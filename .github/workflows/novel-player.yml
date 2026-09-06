@@ -1,0 +1,31 @@
+name: Novel Player CI
+
+on:
+  push:
+    paths:
+      - 'novel_starter/**'
+      - '.github/workflows/novel-player.yml'
+  pull_request:
+    paths:
+      - 'novel_starter/**'
+      - '.github/workflows/novel-player.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  novel-player:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate story format
+        run: node novel_starter/test_story_validator.js
+      - name: Test Hosted runtime readiness
+        run: node novel_starter/test_player_runtime_ready.js
+      - name: Check JavaScript syntax
+        run: |
+          node --check novel_starter/story-validator.js
+          node --check novel_starter/player.js
