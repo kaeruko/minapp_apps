@@ -3,11 +3,15 @@
 
   const formatApi = window.MinAppNovelFormat;
   const core = window.MinAppNovelEditorCore;
+  const assetTools = window.MinAppNovelAssetTools;
   if (!formatApi || typeof formatApi.validateStory !== 'function') {
     throw new Error('MinAppNovelFormat validator is not loaded');
   }
   if (!core || typeof core.validateProject !== 'function') {
     throw new Error('MinAppNovelEditorCore is not loaded');
+  }
+  if (!assetTools || typeof assetTools.descriptor !== 'function') {
+    throw new Error('MinAppNovelAssetTools is not loaded');
   }
 
   const els = {
@@ -18,7 +22,11 @@
     startScene: document.getElementById('start-scene'),
     sceneList: document.getElementById('scene-list'),
     eventEditor: document.getElementById('event-editor'),
+    assetId: document.getElementById('asset-id'),
+    assetFile: document.getElementById('asset-file'),
+    assetSave: document.getElementById('asset-save-button'),
     assetList: document.getElementById('asset-list'),
+    assetPreview: document.getElementById('asset-preview'),
     validation: document.getElementById('validation'),
     save: document.getElementById('save-button'),
     preview: document.getElementById('preview-button'),
@@ -32,6 +40,8 @@
   let previewedRevision = null;
   let dirty = false;
   let busy = false;
+  let storageValid = false;
+  let assetPreviewUrl = null;
 
   function authoringApi() {
     const minapp = window.minapp;
@@ -40,11 +50,25 @@
     if (
       typeof api.load !== 'function' ||
       typeof api.save !== 'function' ||
+      typeof api.getAsset !== 'function' ||
+      typeof api.saveAsset !== 'function' ||
+      typeof api.deleteAsset !== 'function' ||
       typeof api.preview !== 'function' ||
       typeof api.publish !== 'function'
     ) {
-      throw Object.assign(new Error('minapp.authoring.load/save/preview/publish are required'), {
-        code: 'authoring_bridge_incomplete',
+      throw Object.assign(
+        new Error('minapp.authoring load/save/assets/preview/publish are required'),
+        { code: 'authoring_bridge_incomplete' },
+      );
+    }
+    return api;
+  }
+
+  function requiredAuthoringApi() {
+    const api = authoringApi();
+    if (!api) {
+      throw Object.assign(new Error('Authoring bridge is unavailable'), {
+        code: 'authoring_unavailable',
       });
     }
     return api;
@@ -58,24 +82,28 @@
   function setBusy(value) {
     busy = value;
     els.save.disabled = value || !project || !dirty;
-    els.preview.disabled = value || !project || !workingDocument || dirty;
+    els.preview.disabled = value || !project || !workingDocument || dirty || !storageValid;
     els.publish.disabled =
       value ||
       !project ||
       !workingDocument ||
       dirty ||
+      !storageValid ||
       previewedRevision !== project.draftRevision;
     els.title.disabled = value || !project || !workingDocument;
     els.startScene.disabled = value || !project || !workingDocument;
+    els.assetId.disabled = value || !project || !workingDocument;
+    els.assetFile.disabled = value || !project || !workingDocument;
+    els.assetSave.disabled = value || !project || !workingDocument || dirty;
   }
 
   function markDirty() {
     if (!project || !workingDocument || busy) return;
     dirty = true;
     previewedRevision = null;
+    validateWorkingDocument();
     setBusy(false);
     setStatus('未保存の変更があります', 'dirty');
-    validateWorkingDocument();
   }
 
   function formatError(error) {
@@ -84,17 +112,44 @@
     return `${code}: ${message}`;
   }
 
+  function assertOperationalDocument() {
+    formatApi.validateStory(workingDocument);
+    assetTools.validateServerAssets(project.assets);
+    const missing = assetTools.missingStoredPaths(workingDocument, project.assets);
+    if (missing.length > 0) {
+      throw Object.assign(
+        new Error(`Novel documentが未保存の素材を参照しています: ${missing.join(', ')}`),
+        { code: 'asset_not_stored' },
+      );
+    }
+  }
+
   function validateWorkingDocument() {
     try {
-      formatApi.validateStory(workingDocument);
-      els.validation.textContent = '✓ minapp/novel@1 として有効';
+      assertOperationalDocument();
+      storageValid = true;
+      els.validation.textContent = '✓ minapp/novel@1 と素材保存状態が有効';
       els.validation.dataset.kind = 'ok';
       return true;
     } catch (error) {
+      storageValid = false;
       els.validation.textContent = formatError(error);
       els.validation.dataset.kind = 'error';
       return false;
     }
+  }
+
+  function acceptDraftMutation(response, expectedRevision) {
+    const nextRevision = core.validateSaveResponse(
+      response,
+      expectedRevision,
+      project.contentId,
+    );
+    assetTools.validateServerAssets(response.assets);
+    project.draftRevision = nextRevision;
+    project.assets = core.deepClone(response.assets);
+    previewedRevision = null;
+    return nextRevision;
   }
 
   function renderProject() {
@@ -149,6 +204,66 @@
     return row;
   }
 
+  function assetSelect(currentAssetId, kind, label, onChange) {
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', label);
+    const candidates = Object.entries(workingDocument.assets).filter(
+      ([, asset]) => asset.kind === kind,
+    );
+    for (const [assetId] of candidates) {
+      const option = document.createElement('option');
+      option.value = assetId;
+      option.textContent = assetId;
+      option.selected = assetId === currentAssetId;
+      select.appendChild(option);
+    }
+    select.disabled = candidates.length === 0;
+    select.addEventListener('change', () => onChange(select.value));
+    return select;
+  }
+
+  function renderEditableAssetEvent(card, event) {
+    if (event.type === 'background') {
+      card.appendChild(
+        assetSelect(event.asset, 'image', `${event.id} の背景素材`, (value) => {
+          event.asset = value;
+          markDirty();
+        }),
+      );
+      return true;
+    }
+    if (event.type === 'se') {
+      card.appendChild(
+        assetSelect(event.asset, 'audio', `${event.id} のSE素材`, (value) => {
+          event.asset = value;
+          markDirty();
+        }),
+      );
+      return true;
+    }
+    if (event.type === 'bgm' && event.action === 'play') {
+      card.appendChild(
+        assetSelect(event.asset, 'audio', `${event.id} のBGM素材`, (value) => {
+          event.asset = value;
+          markDirty();
+        }),
+      );
+      const loopLabel = document.createElement('label');
+      loopLabel.className = 'inline-check';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = event.loop === true;
+      checkbox.addEventListener('change', () => {
+        event.loop = checkbox.checked;
+        markDirty();
+      });
+      loopLabel.append(checkbox, document.createTextNode('ループ'));
+      card.appendChild(loopLabel);
+      return true;
+    }
+    return false;
+  }
+
   function eventCard(event) {
     const card = document.createElement('section');
     card.className = 'event-card';
@@ -160,6 +275,8 @@
     id.textContent = event.id;
     heading.append(type, id);
     card.appendChild(heading);
+
+    if (renderEditableAssetEvent(card, event)) return card;
 
     if (event.type === 'dialogue') {
       if (event.speaker) card.appendChild(readOnlyField('speaker', event.speaker));
@@ -235,17 +352,283 @@
     }
   }
 
+  function clearAssetPreview() {
+    if (assetPreviewUrl) {
+      URL.revokeObjectURL(assetPreviewUrl);
+      assetPreviewUrl = null;
+    }
+    els.assetPreview.replaceChildren();
+  }
+
+  async function previewAsset(assetId) {
+    const descriptor = workingDocument.assets[assetId];
+    if (!descriptor) {
+      throw Object.assign(new Error(`素材 ${assetId} がありません`), {
+        code: 'asset_not_found',
+      });
+    }
+    const result = await requiredAuthoringApi().getAsset(descriptor.src);
+    if (
+      !result ||
+      !(result.bytes instanceof Uint8Array) ||
+      result.contentType !== descriptor.mime
+    ) {
+      throw Object.assign(new Error('素材取得結果がNovel documentと一致しません'), {
+        code: 'asset_response_mismatch',
+      });
+    }
+    clearAssetPreview();
+    assetPreviewUrl = URL.createObjectURL(
+      new Blob([result.bytes], { type: result.contentType }),
+    );
+    const label = document.createElement('strong');
+    label.textContent = assetId;
+    els.assetPreview.appendChild(label);
+    if (descriptor.kind === 'image') {
+      const image = document.createElement('img');
+      image.src = assetPreviewUrl;
+      image.alt = descriptor.alt || assetId;
+      els.assetPreview.appendChild(image);
+    } else {
+      const audio = document.createElement('audio');
+      audio.src = assetPreviewUrl;
+      audio.controls = true;
+      els.assetPreview.appendChild(audio);
+    }
+  }
+
+  async function deleteOrphanAsset(path) {
+    if (dirty) {
+      throw Object.assign(new Error('素材整理前に変更を保存してください'), {
+        code: 'unsaved_changes',
+      });
+    }
+    if (Object.values(workingDocument.assets).some((asset) => asset.src === path)) {
+      throw Object.assign(new Error('この素材pathはNovel documentから参照されています'), {
+        code: 'asset_in_use',
+      });
+    }
+    const api = requiredAuthoringApi();
+    const expectedRevision = project.draftRevision;
+    setBusy(true);
+    setStatus(`未参照素材 ${path} を削除しています…`);
+    const response = await api.deleteAsset(path, { expectedRevision });
+    acceptDraftMutation(response, expectedRevision);
+    renderProject();
+    setStatus(`未参照素材 ${path} を削除しました`, 'ok');
+  }
+
+  async function deleteLogicalAsset(assetId) {
+    if (dirty) {
+      throw Object.assign(new Error('素材削除前に変更を保存してください'), {
+        code: 'unsaved_changes',
+      });
+    }
+    const descriptor = workingDocument.assets[assetId];
+    if (!descriptor) {
+      throw Object.assign(new Error(`素材 ${assetId} がありません`), {
+        code: 'asset_not_found',
+      });
+    }
+    const refs = assetTools.references(workingDocument, assetId);
+    if (refs.length > 0) {
+      throw Object.assign(new Error(`素材 ${assetId} は使用中です: ${refs.join(', ')}`), {
+        code: 'asset_in_use',
+      });
+    }
+
+    const api = requiredAuthoringApi();
+    const nextDocument = core.deepClone(workingDocument);
+    delete nextDocument.assets[assetId];
+    formatApi.validateStory(nextDocument);
+    setBusy(true);
+    setStatus(`素材 ${assetId} を削除しています…`);
+
+    let expectedRevision = project.draftRevision;
+    const saveResponse = await api.save(nextDocument, { expectedRevision });
+    acceptDraftMutation(saveResponse, expectedRevision);
+    workingDocument = core.deepClone(nextDocument);
+    dirty = false;
+
+    const pathStillUsed = Object.values(workingDocument.assets).some(
+      (asset) => asset.src === descriptor.src,
+    );
+    if (!pathStillUsed && assetTools.serverAssetByPath(project.assets, descriptor.src)) {
+      try {
+        expectedRevision = project.draftRevision;
+        const deleteResponse = await api.deleteAsset(descriptor.src, { expectedRevision });
+        acceptDraftMutation(deleteResponse, expectedRevision);
+      } catch (error) {
+        renderProject();
+        throw error;
+      }
+    }
+    renderProject();
+    setStatus(`素材 ${assetId} を削除しました`, 'ok');
+  }
+
+  async function saveAssetFromForm() {
+    if (dirty) {
+      throw Object.assign(new Error('素材追加・差し替え前に変更を保存してください'), {
+        code: 'unsaved_changes',
+      });
+    }
+    const file = els.assetFile.files && els.assetFile.files[0];
+    if (!file) {
+      throw Object.assign(new Error('素材ファイルを選んでください'), {
+        code: 'asset_file_required',
+      });
+    }
+    const assetId = assetTools.requireAssetId(els.assetId.value.trim());
+    const previous = workingDocument.assets[assetId] || null;
+    const descriptor = assetTools.descriptor(assetId, file.name, previous);
+    const nextDocument = core.deepClone(workingDocument);
+    nextDocument.assets[assetId] = descriptor;
+    formatApi.validateStory(nextDocument);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.length === 0) {
+      throw Object.assign(new Error('空の素材ファイルは保存できません'), {
+        code: 'empty_asset',
+      });
+    }
+
+    const api = requiredAuthoringApi();
+    setBusy(true);
+    setStatus(`素材 ${assetId} を保存しています…`);
+    let expectedRevision = project.draftRevision;
+    const assetResponse = await api.saveAsset(descriptor.src, bytes, {
+      expectedRevision,
+    });
+    acceptDraftMutation(assetResponse, expectedRevision);
+
+    try {
+      expectedRevision = project.draftRevision;
+      const documentResponse = await api.save(nextDocument, { expectedRevision });
+      acceptDraftMutation(documentResponse, expectedRevision);
+      workingDocument = core.deepClone(nextDocument);
+      dirty = false;
+    } catch (error) {
+      renderProject();
+      throw error;
+    }
+
+    if (
+      previous &&
+      previous.src !== descriptor.src &&
+      !assetTools.pathUsedByOtherDescriptor(workingDocument, assetId, previous.src) &&
+      assetTools.serverAssetByPath(project.assets, previous.src)
+    ) {
+      try {
+        expectedRevision = project.draftRevision;
+        const cleanupResponse = await api.deleteAsset(previous.src, {
+          expectedRevision,
+        });
+        acceptDraftMutation(cleanupResponse, expectedRevision);
+      } catch (error) {
+        renderProject();
+        throw error;
+      }
+    }
+
+    els.assetId.value = '';
+    els.assetFile.value = '';
+    renderProject();
+    setStatus(`素材 ${assetId} をDraftへ反映しました`, 'ok');
+  }
+
   function renderAssets() {
+    clearAssetPreview();
     els.assetList.replaceChildren();
-    if (project.assets.length === 0) {
+    assetTools.validateServerAssets(project.assets);
+    const logicalEntries = Object.entries(workingDocument.assets);
+    const referencedPaths = new Set(logicalEntries.map(([, asset]) => asset.src));
+    if (logicalEntries.length === 0 && project.assets.length === 0) {
       const empty = document.createElement('p');
-      empty.textContent = 'Authoring Projectにassetはまだありません';
+      empty.textContent = '素材はまだありません';
       els.assetList.appendChild(empty);
       return;
     }
-    for (const asset of project.assets) {
-      const row = document.createElement('code');
-      row.textContent = typeof asset === 'string' ? asset : JSON.stringify(asset);
+
+    for (const [assetId, asset] of logicalEntries) {
+      const row = document.createElement('div');
+      row.className = 'asset-row';
+      const info = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = assetId;
+      const meta = document.createElement('code');
+      const stored = assetTools.serverAssetByPath(project.assets, asset.src);
+      meta.textContent = `${asset.kind} · ${asset.src} · ${asset.mime}${
+        stored ? ` · ${stored.bytes} bytes` : ' · server未保存'
+      }`;
+      info.append(title, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'asset-actions';
+      const preview = document.createElement('button');
+      preview.type = 'button';
+      preview.className = 'mini-button';
+      preview.textContent = '確認';
+      preview.disabled = !stored || busy;
+      preview.addEventListener('click', async () => {
+        try {
+          await previewAsset(assetId);
+        } catch (error) {
+          setStatus(formatError(error), 'error');
+        }
+      });
+
+      const replace = document.createElement('button');
+      replace.type = 'button';
+      replace.className = 'mini-button';
+      replace.textContent = '差し替え';
+      replace.disabled = busy || dirty;
+      replace.addEventListener('click', () => {
+        els.assetId.value = assetId;
+        els.assetFile.click();
+      });
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mini-button danger';
+      remove.textContent = '削除';
+      remove.disabled = busy || dirty;
+      remove.addEventListener('click', async () => {
+        try {
+          await deleteLogicalAsset(assetId);
+        } catch (error) {
+          setBusy(false);
+          setStatus(formatError(error), 'error');
+        }
+      });
+      actions.append(preview, replace, remove);
+      row.append(info, actions);
+      els.assetList.appendChild(row);
+    }
+
+    for (const serverAsset of project.assets) {
+      if (referencedPaths.has(serverAsset.path)) continue;
+      const row = document.createElement('div');
+      row.className = 'asset-row orphan';
+      const info = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = '未参照素材';
+      const meta = document.createElement('code');
+      meta.textContent = `${serverAsset.path} · ${serverAsset.bytes} bytes`;
+      info.append(title, meta);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mini-button danger';
+      remove.textContent = '整理';
+      remove.disabled = busy || dirty;
+      remove.addEventListener('click', async () => {
+        try {
+          await deleteOrphanAsset(serverAsset.path);
+        } catch (error) {
+          setBusy(false);
+          setStatus(formatError(error), 'error');
+        }
+      });
+      row.append(info, remove);
       els.assetList.appendChild(row);
     }
   }
@@ -256,21 +639,14 @@
     const expectedRevision = project.draftRevision;
     setStatus('新しい作品を初期化しています…');
     const response = await api.save(initialDocument, { expectedRevision });
-    const nextRevision = core.validateSaveResponse(
-      response,
-      expectedRevision,
-      project.contentId,
-    );
-    project.draftRevision = nextRevision;
-    project.assets = core.deepClone(response.assets);
+    acceptDraftMutation(response, expectedRevision);
     project.document = core.deepClone(initialDocument);
     project.needsInitialization = false;
     workingDocument = core.deepClone(initialDocument);
     selectedSceneId = workingDocument.start_scene;
-    previewedRevision = null;
     dirty = false;
     renderProject();
-    setStatus(`新しい作品を Draft r${nextRevision} として初期化しました`, 'ok');
+    setStatus(`新しい作品を Draft r${project.draftRevision} として初期化しました`, 'ok');
   }
 
   async function loadProject() {
@@ -280,6 +656,7 @@
     setStatus('作品を読み込んでいます…');
     const payload = await api.load();
     project = core.validateProject(payload, formatApi.validateStory);
+    assetTools.validateServerAssets(project.assets);
     if (project.needsInitialization) {
       await initializeEmptyProject(api);
       return true;
@@ -300,13 +677,7 @@
       });
     }
     if (!dirty) return;
-    const api = authoringApi();
-    if (!api) {
-      throw Object.assign(new Error('Authoring bridge is unavailable'), {
-        code: 'authoring_unavailable',
-      });
-    }
-
+    const api = requiredAuthoringApi();
     setBusy(true);
     setStatus('保存しています…');
     const expectedRevision = project.draftRevision;
@@ -315,18 +686,11 @@
       formatApi.validateStory,
     );
     const response = await api.save(documentToSave, { expectedRevision });
-    const nextRevision = core.validateSaveResponse(
-      response,
-      expectedRevision,
-      project.contentId,
-    );
-    project.draftRevision = nextRevision;
-    project.assets = core.deepClone(response.assets);
+    acceptDraftMutation(response, expectedRevision);
     workingDocument = core.deepClone(documentToSave);
-    previewedRevision = null;
     dirty = false;
     renderProject();
-    setStatus(`Draft r${nextRevision} を保存しました。公開前にPreviewしてください`, 'ok');
+    setStatus(`Draft r${project.draftRevision} を保存しました。公開前にPreviewしてください`, 'ok');
   }
 
   async function previewProject() {
@@ -340,14 +704,8 @@
         code: 'unsaved_changes',
       });
     }
-    formatApi.validateStory(workingDocument);
-    const api = authoringApi();
-    if (!api) {
-      throw Object.assign(new Error('Authoring bridge is unavailable'), {
-        code: 'authoring_unavailable',
-      });
-    }
-
+    assertOperationalDocument();
+    const api = requiredAuthoringApi();
     setBusy(true);
     setStatus('Previewを開いています…');
     const expectedRevision = project.draftRevision;
@@ -380,14 +738,8 @@
         code: 'preview_required',
       });
     }
-    formatApi.validateStory(workingDocument);
-    const api = authoringApi();
-    if (!api) {
-      throw Object.assign(new Error('Authoring bridge is unavailable'), {
-        code: 'authoring_unavailable',
-      });
-    }
-
+    assertOperationalDocument();
+    const api = requiredAuthoringApi();
     setBusy(true);
     setStatus('公開要求を送っています…');
     const expectedRevision = project.draftRevision;
@@ -428,6 +780,27 @@
     if (!workingDocument) return;
     workingDocument.start_scene = els.startScene.value;
     markDirty();
+  });
+  els.assetSave.addEventListener('click', async () => {
+    try {
+      await saveAssetFromForm();
+    } catch (error) {
+      setBusy(false);
+      setStatus(formatError(error), 'error');
+      console.error(error);
+    }
+  });
+  els.assetFile.addEventListener('change', () => {
+    if (
+      els.assetFile.files &&
+      els.assetFile.files[0] &&
+      els.assetId.value.trim() !== ''
+    ) {
+      setStatus(
+        `素材 ${els.assetId.value.trim()} を「追加 / 差し替え」で反映できます`,
+        'waiting',
+      );
+    }
   });
   els.save.addEventListener('click', async () => {
     try {
