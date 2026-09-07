@@ -1,6 +1,6 @@
 # Novel reference (`minapp/novel@1`)
 
-Tracks `kaeruko/minapp_apps#1` and the generic Authoring contract in `kaeruko/minapp#161`.
+Tracks `kaeruko/minapp_apps#1` and the generic Authoring contract in `kaeruko/minapp`.
 
 This repository contains the Novel-specific reference implementation only. The Host stays format-agnostic and selects Editor/Player by exact `content_format` contracts.
 
@@ -30,6 +30,10 @@ The Editor:
 - initializes only an exact empty `{}` Authoring document
 - rejects malformed non-empty documents instead of reinitializing them
 - loads/saves through `minapp.authoring`
+- creates and edits characters + expressions and scenes while keeping stable IDs
+- creates, deletes, and reorders every v1 event type through validated structural mutations
+- edits dialogue `speaker`, choice/goto targets, character show/hide + slot/character/expression, background, BGM, and SE assignments
+- uploads/replaces/previews/deletes image/audio assets through the scoped Authoring asset bridge and surfaces orphan cleanup explicitly
 - uses Host-driven `minapp.authoring.preview()` with the real Novel Player
 - requires a successful Preview of the current Draft before enabling Publish
 - validates the current generic Publish response including the pinned Player identity/version
@@ -71,7 +75,7 @@ The validator rejects, without fallback:
 - unsafe relative asset paths
 - malformed or unterminated scenes
 
-The Player never skips unknown events or substitutes another asset/path/type.
+The Player never skips unknown events or substitutes another asset/path/type. The Editor also refuses invalid structural deletion/reordering and preserves Authoring revision/scope errors rather than retrying through another path.
 
 ## Embedded Master Data
 
@@ -132,8 +136,8 @@ The Authoring Draft revision is a separate platform revision used for optimistic
 ```text
 Host creates document: {}
   -> Novel Editor initializes exact {}
+  -> add assets / characters / expressions / scenes / events
   -> save Draft
-  -> edit + save
   -> Host-driven Preview with compatible Novel Player
   -> Publish the same pinned Draft/Player selection
   -> later load the same content_id and re-edit
@@ -143,7 +147,9 @@ Preview uses the platform's isolated Runtime/userState namespace. The Editor doe
 
 ## Assets
 
-Novel v1 supports image and audio asset references in the document. The generic Authoring backend already stores revisioned assets and enforces platform limits/types. The Novel Editor must use the trusted Authoring asset bridge once that bridge is exposed by the Host; it must not receive backend credentials or implement a direct-network fallback.
+Novel v1 supports image and audio asset references in the document. The generic Authoring backend and Host adapters expose scoped `getAsset` / `saveAsset` / `deleteAsset` operations with optimistic revision checks. The Novel Editor uses only that trusted bridge: it supplies validated relative paths, bytes, and `expectedRevision`, while backend credentials and scope stay in the Host.
+
+Asset and document mutations deliberately remain separate. The Editor does not auto-retry a stale revision or perform hidden rollback fallback. If a multi-step operation stops after storing bytes, the remaining unreferenced server asset is shown for explicit cleanup.
 
 ## Validation check
 
@@ -153,9 +159,11 @@ No package install is required:
 node novel_starter/test_story_validator.js
 node novel_starter/test_player_runtime_ready.js
 node novel_editor/test_editor_core.js
+node novel_editor/test_asset_tools.js
 node --check novel_starter/story-validator.js
 node --check novel_starter/player.js
 node --check novel_editor/story-validator.js
 node --check novel_editor/editor-core.js
+node --check novel_editor/asset-tools.js
 node --check novel_editor/editor.js
 ```
