@@ -36,10 +36,20 @@ jobs:
               if line.startswith('          '):
                   lines.append(line[10:])
               else:
-                  # Lines with less indentation belong to Python triple-quoted
-                  # HTML literals. Preserve that literal indentation exactly.
                   lines.append(line)
-          exec(compile('\n'.join(lines), 'novel-asset-ui-migration.py', 'exec'), {'__name__': '__novel_asset_ui__'})
+          script = '\n'.join(lines)
+          broken = '''old_material = \'\'\'        <section class="side-card">
+<h3>素材</h3>
+<div id="asset-list"><p>未読込</p></div>
+        </section>\'\'\''''
+          fixed = '''old_material = \'\'\'        <section class="side-card">
+          <h3>素材</h3>
+          <div id="asset-list"><p>未読込</p></div>
+        </section>\'\'\''''
+          if script.count(broken) != 1:
+              raise RuntimeError('Novel material migration anchor changed unexpectedly')
+          script = script.replace(broken, fixed, 1)
+          exec(compile(script, 'novel-asset-ui-migration.py', 'exec'), {'__name__': '__novel_asset_ui__'})
           Path('.github/workflows/novel-asset-ui-runner.yml').unlink()
       - name: Test Novel implementation
         run: |
