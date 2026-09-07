@@ -1,28 +1,43 @@
-# Novel Player reference (`minapp/novel@1`)
+# Novel reference (`minapp/novel@1`)
 
-Tracks `kaeruko/minapp_apps#1` and the shared Authoring contract in `kaeruko/minapp#98`.
+Tracks `kaeruko/minapp_apps#1` and the generic Authoring contract in `kaeruko/minapp#161`.
 
-This directory is the reference Player for the first editable content format:
+This repository contains the Novel-specific reference implementation only. The Host stays format-agnostic and selects Editor/Player by exact `content_format` contracts.
+
+## Packages
+
+### `novel_starter`
+
+Reference Player for:
 
 ```text
 minapp/novel@1
 ```
 
-The implementation order is intentionally Player-first. The Editor is not implemented here yet.
-
-## Files
-
-- `story.schema.json` — formal JSON Schema for `minapp/novel@1`
-- `story-validator.js` — fail-fast semantic validation that also checks cross references
-- `player.js` — generic event-driven Player
+- `story.schema.json` — formal JSON Schema
+- `story-validator.js` — fail-fast semantic validation and cross-reference checks
+- `player.js` — JSON-driven Player
 - `index.html` — published-artifact style sample with Master Data embedded as `application/json`
-- `face.jpg` — sample character asset
-- `test_story_validator.js` — dependency-free Node checks for important validation failures
-- `test_player_runtime_ready.js` — dependency-free Hosted bridge readiness regression check
+- `face.jpg` — sample asset
+- runtime and validation regression tests
+
+### `novel_editor`
+
+Reference Editor for the same exact format.
+
+The Editor:
+
+- initializes only an exact empty `{}` Authoring document
+- rejects malformed non-empty documents instead of reinitializing them
+- loads/saves through `minapp.authoring`
+- uses Host-driven `minapp.authoring.preview()` with the real Novel Player
+- requires a successful Preview of the current Draft before enabling Publish
+- validates the current generic Publish response including the pinned Player identity/version
+- never receives a Cognito token or chooses a backend directly
 
 ## v1 event types
 
-Every scene and event has a stable ID independent of display order.
+Every scene/event/choice has a stable ID independent of display order.
 
 Supported events:
 
@@ -31,14 +46,15 @@ background
 character (show / hide)
 dialogue
 choice
+goto
 bgm (play / stop)
 se
 end
 ```
 
-`choice.options[].goto` targets a scene ID. Event IDs must be unique across the entire work so saved progress can identify a stable resume point.
+`choice.options[].goto` and an explicit `goto` event both target scene IDs. Event IDs are unique across the work so saved progress can identify a stable resume point.
 
-A scene must end in `choice` or `end`. Falling off the end of a scene is invalid rather than being silently interpreted as an ending.
+A scene must end in `choice`, `goto`, or `end`. Falling off a scene is invalid. The Player also bounds an automatic-only event chain and fails with `automatic_event_loop` instead of hanging on an unconditional cycle.
 
 ## Fail-fast behavior
 
@@ -49,17 +65,17 @@ The validator rejects, without fallback:
 - unknown fields or event types
 - duplicate event IDs
 - scene key / `scene.id` mismatches
-- missing `goto` targets
+- missing transition targets
 - missing characters / expressions / assets
 - image/audio kind mismatches
 - unsafe relative asset paths
 - malformed or unterminated scenes
 
-The Player does not skip unknown events or substitute another asset/path/type.
+The Player never skips unknown events or substitutes another asset/path/type.
 
 ## Embedded Master Data
 
-For v1 the Player does not require `fetch('story.json')`. The publish compiler can embed validated Master Data into:
+The Player does not require `fetch('story.json')`. Publish embeds validated Master Data into the Player artifact:
 
 ```html
 <script id="minapp-novel-story" type="application/json">
@@ -67,17 +83,13 @@ For v1 the Player does not require `fetch('story.json')`. The publish compiler c
 </script>
 ```
 
-This keeps the scenario as data rather than generating scenario-specific JavaScript and avoids making relative JSON fetch behavior a requirement of the initial Hosted CSP/runtime contract.
-
-`story.json` remains the logical Authoring source of truth; embedding is a publish-artifact representation.
+The Authoring document remains the editable source of truth; the embedded JSON is the immutable publish representation.
 
 ## Save / resume contract
 
 The Player never falls back from private progress to shared `minapp.state`.
 
-When running inside a MinApp Host, the native JavaScript channel may exist before `window.minapp` is injected. In that case the Player stays in an explicit `ホスト接続待ち` state and waits for `minappready`; it does not silently enter standalone mode.
-
-Once the Host bridge is ready, the Player requires:
+Inside a MinApp Host it requires:
 
 ```js
 minapp.userState.get(key)
@@ -85,11 +97,9 @@ minapp.userState.set(key, value)
 minapp.userState.delete(key)
 ```
 
-If the Host exists but does not provide `minapp.userState`, startup fails with `user_state_unavailable`.
+If the native Host channel exists before `window.minapp` is injected, the Player waits for `minappready`. If the Host exists without `minapp.userState`, startup fails with `user_state_unavailable`. A plain standalone page is an explicit no-save mode only.
 
-When opened as a plain standalone web page with neither the Host channel nor `window.minapp`, the sample can be played explicitly in no-save preview mode.
-
-Saved progress includes:
+Saved progress includes stable location and display state:
 
 ```json
 {
@@ -113,9 +123,27 @@ Saved progress includes:
 }
 ```
 
-A save from another content revision is rejected as `incompatible_save`. It is not silently migrated. The UI may offer an explicit user action to delete that save and start over.
+`content_revision` is a **save-compatibility epoch**, not the Authoring Draft revision. Ordinary title/dialogue/scene edits preserve it, so a normal republish does not invalidate every user's progress. A deliberate incompatible story change may explicitly bump it; an older save then fails as `incompatible_save` and is never silently migrated.
 
-Preview state isolation itself belongs to the shared Runtime/Authoring implementation in `kaeruko/minapp#98`; the Player only uses the scoped `minapp.userState` surface provided by its session.
+The Authoring Draft revision is a separate platform revision used for optimistic concurrency, Preview pinning, and Publish pinning.
+
+## Authoring reference flow
+
+```text
+Host creates document: {}
+  -> Novel Editor initializes exact {}
+  -> save Draft
+  -> edit + save
+  -> Host-driven Preview with compatible Novel Player
+  -> Publish the same pinned Draft/Player selection
+  -> later load the same content_id and re-edit
+```
+
+Preview uses the platform's isolated Runtime/userState namespace. The Editor does not contain a second simplified Player.
+
+## Assets
+
+Novel v1 supports image and audio asset references in the document. The generic Authoring backend already stores revisioned assets and enforces platform limits/types. The Novel Editor must use the trusted Authoring asset bridge once that bridge is exposed by the Host; it must not receive backend credentials or implement a direct-network fallback.
 
 ## Validation check
 
@@ -124,8 +152,10 @@ No package install is required:
 ```bash
 node novel_starter/test_story_validator.js
 node novel_starter/test_player_runtime_ready.js
+node novel_editor/test_editor_core.js
 node --check novel_starter/story-validator.js
 node --check novel_starter/player.js
+node --check novel_editor/story-validator.js
+node --check novel_editor/editor-core.js
+node --check novel_editor/editor.js
 ```
-
-The shared Runtime/Authoring substrate now provides `minapp.userState`, audio delivery, Runtime session renewal, preview state isolation, draft/asset Authoring storage, scoped Authoring sessions, and immutable publish. The next Novel-specific step is to connect the Editor to that contract.
