@@ -6,6 +6,8 @@ const path = require('path');
 const vm = require('vm');
 
 const playerSource = fs.readFileSync(path.join(__dirname, 'player.js'), 'utf8');
+assert.match(playerSource, /case 'goto':[\s\S]*sceneId = event\.goto;[\s\S]*eventIndex = 0;/);
+assert.match(playerSource, /automatic_event_loop/);
 
 function element() {
   const listeners = new Map();

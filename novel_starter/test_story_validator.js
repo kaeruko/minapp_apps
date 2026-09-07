@@ -41,6 +41,13 @@ function expectCode(mutator, expectedCode) {
 
 assert.equal(validateStory(validStory()).content_format, FORMAT);
 
+{
+  const story = validStory();
+  story.scenes.start.events = [{ id: 'jump', type: 'goto', goto: 'finish' }];
+  story.scenes.finish = { id: 'finish', events: [{ id: 'finish-end', type: 'end' }] };
+  assert.equal(validateStory(story).scenes.start.events[0].type, 'goto');
+}
+
 expectCode((story) => { story.content_format = 'novel-v1'; }, 'unsupported_format');
 expectCode((story) => { story.scenes.start.events[1].type = 'mystery'; }, 'unknown_event_type');
 expectCode((story) => { story.scenes.start.events[2].id = 'line'; }, 'duplicate_event_id');
@@ -48,6 +55,9 @@ expectCode((story) => {
   story.scenes.start.events = [
     { id: 'choice', type: 'choice', options: [{ id: 'x', label: 'go', goto: 'missing' }] },
   ];
+}, 'missing_scene');
+expectCode((story) => {
+  story.scenes.start.events = [{ id: 'jump', type: 'goto', goto: 'missing' }];
 }, 'missing_scene');
 expectCode((story) => { story.characters.ren.expressions.normal = 'missing'; }, 'missing_asset');
 expectCode((story) => { story.assets.face.src = '../face.jpg'; }, 'unsafe_asset_path');

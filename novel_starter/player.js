@@ -301,7 +301,12 @@
 
   async function runUntilPause() {
     ended = false;
+    let automaticSteps = 0;
     while (true) {
+      automaticSteps += 1;
+      if (automaticSteps > 1000) {
+        throw Object.assign(new Error('automatic event chain exceeded 1000 steps'), { code: 'automatic_event_loop' });
+      }
       const scene = story.scenes[sceneId];
       if (!scene) throw Object.assign(new Error(`scene ${sceneId} does not exist`), { code: 'missing_scene' });
       if (eventIndex < 0 || eventIndex >= scene.events.length) {
@@ -363,6 +368,10 @@
           });
           await pauseAtEvent(event);
           return;
+        case 'goto':
+          sceneId = event.goto;
+          eventIndex = 0;
+          break;
         case 'end': {
           ended = true;
           els.end.hidden = false;
