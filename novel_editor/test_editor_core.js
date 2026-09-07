@@ -27,6 +27,18 @@ function story() {
   };
 }
 
+function editableStory() {
+  const result = story();
+  result.assets = {
+    face: { kind: 'image', src: 'assets/face.png', mime: 'image/png' },
+    face_smile: { kind: 'image', src: 'assets/face_smile.png', mime: 'image/png' },
+    bg: { kind: 'image', src: 'assets/bg.webp', mime: 'image/webp' },
+    song: { kind: 'audio', src: 'assets/song.mp3', mime: 'audio/mpeg' },
+    click: { kind: 'audio', src: 'assets/click.wav', mime: 'audio/wav' },
+  };
+  return result;
+}
+
 function project() {
   return {
     content_id: '1'.repeat(32),
@@ -187,6 +199,159 @@ function expectCode(fn, code) {
   expectCode(
     () => core.validateProject(extra, format.validateStory),
     'invalid_authoring_response',
+  );
+}
+
+// Full-schema construction helpers: start from a valid small story and build the
+// characters / expressions / scenes / events that the browser UI exposes.
+{
+  let document = editableStory();
+  format.validateStory(document);
+
+  document = core.addCharacter(
+    document,
+    'akari',
+    'あかり',
+    'normal',
+    'face',
+    format.validateStory,
+  );
+  assert.deepStrictEqual(document.characters.akari.expressions, { normal: 'face' });
+
+  document = core.addCharacterExpression(
+    document,
+    'akari',
+    'smile',
+    'face_smile',
+    format.validateStory,
+  );
+  document = core.setCharacterExpression(
+    document,
+    'akari',
+    'smile',
+    'face',
+    format.validateStory,
+  );
+  assert.strictEqual(document.characters.akari.expressions.smile, 'face');
+  expectCode(
+    () => core.addCharacterExpression(document, 'akari', 'smile', 'face_smile', format.validateStory),
+    'duplicate_expression_id',
+  );
+
+  document = core.addScene(document, 'hall', format.validateStory);
+  assert.strictEqual(document.scenes.hall.events.length, 1);
+  assert.strictEqual(document.scenes.hall.events[0].type, 'end');
+
+  for (const eventType of ['background', 'character', 'dialogue', 'choice', 'goto', 'bgm', 'se', 'end']) {
+    document = core.addEvent(document, 'hall', eventType, format.validateStory);
+  }
+  format.validateStory(document);
+
+  const eventIds = Object.values(document.scenes)
+    .flatMap((scene) => scene.events.map((event) => event.id));
+  assert.strictEqual(new Set(eventIds).size, eventIds.length, 'event IDs must stay globally unique');
+
+  const characterEvent = document.scenes.hall.events.find((event) => event.type === 'character');
+  document = core.setCharacterEventAction(
+    document,
+    'hall',
+    characterEvent.id,
+    'hide',
+    format.validateStory,
+  );
+  const hidden = document.scenes.hall.events.find((event) => event.id === characterEvent.id);
+  assert.strictEqual(hidden.action, 'hide');
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(hidden, 'character'), false);
+  document = core.setCharacterEventAction(
+    document,
+    'hall',
+    characterEvent.id,
+    'show',
+    format.validateStory,
+  );
+  const shown = document.scenes.hall.events.find((event) => event.id === characterEvent.id);
+  assert.strictEqual(shown.character, 'akari');
+  assert.strictEqual(shown.expression, 'normal');
+
+  const bgmEvent = document.scenes.hall.events.find((event) => event.type === 'bgm');
+  document = core.setBgmEventAction(document, 'hall', bgmEvent.id, 'stop', format.validateStory);
+  const stopped = document.scenes.hall.events.find((event) => event.id === bgmEvent.id);
+  assert.deepStrictEqual(
+    Object.keys(stopped).sort(),
+    ['action', 'id', 'type'],
+    'BGM stop must not retain play-only fields',
+  );
+  document = core.setBgmEventAction(document, 'hall', bgmEvent.id, 'play', format.validateStory);
+  assert.strictEqual(document.scenes.hall.events.find((event) => event.id === bgmEvent.id).asset, 'song');
+
+  const choiceEvent = document.scenes.hall.events.find((event) => event.type === 'choice');
+  document = core.addChoiceOption(document, 'hall', choiceEvent.id, format.validateStory);
+  assert.strictEqual(
+    document.scenes.hall.events.find((event) => event.id === choiceEvent.id).options.length,
+    2,
+  );
+  const addedOption = document.scenes.hall.events
+    .find((event) => event.id === choiceEvent.id)
+    .options[1];
+  document = core.removeChoiceOption(
+    document,
+    'hall',
+    choiceEvent.id,
+    addedOption.id,
+    format.validateStory,
+  );
+  expectCode(
+    () => core.removeChoiceOption(document, 'hall', choiceEvent.id, 'option_001', format.validateStory),
+    'last_choice_option',
+  );
+
+  const newEnd = document.scenes.hall.events.filter((event) => event.type === 'end')[0];
+  const beforeMove = document.scenes.hall.events.findIndex((event) => event.id === newEnd.id);
+  if (beforeMove > 0) {
+    document = core.moveEvent(document, 'hall', newEnd.id, -1, format.validateStory);
+    assert.strictEqual(
+      document.scenes.hall.events.findIndex((event) => event.id === newEnd.id),
+      beforeMove - 1,
+    );
+  }
+
+  const seEvent = document.scenes.hall.events.find((event) => event.type === 'se');
+  document = core.removeEvent(document, 'hall', seEvent.id, format.validateStory);
+  assert.strictEqual(document.scenes.hall.events.some((event) => event.id === seEvent.id), false);
+
+  expectCode(
+    () => core.removeCharacter(document, 'akari', format.validateStory),
+    'character_in_use',
+  );
+  expectCode(
+    () => core.removeCharacterExpression(document, 'akari', 'normal', format.validateStory),
+    'expression_in_use',
+  );
+  document = core.addEvent(document, 'start', 'goto', format.validateStory);
+  const startGoto = document.scenes.start.events.find((event) => event.type === 'goto');
+  startGoto.goto = 'hall';
+  format.validateStory(document);
+  expectCode(
+    () => core.removeScene(document, 'hall', format.validateStory),
+    'scene_in_use',
+  );
+}
+
+// Dependency gaps fail explicitly; the helpers do not select another event kind
+// or mutate the document through an alternate path.
+{
+  const noDependencies = story();
+  expectCode(
+    () => core.addEvent(noDependencies, 'start', 'character', format.validateStory),
+    'missing_editor_dependency',
+  );
+  expectCode(
+    () => core.addEvent(noDependencies, 'start', 'bgm', format.validateStory),
+    'missing_editor_dependency',
+  );
+  expectCode(
+    () => core.addCharacter(noDependencies, 'akari', 'あかり', 'normal', 'missing', format.validateStory),
+    'asset_not_found',
   );
 }
 
