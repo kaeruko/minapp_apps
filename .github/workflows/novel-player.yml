@@ -23,6 +23,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Checkout generic Host reference
+        uses: actions/checkout@v4
+        with:
+          repository: kaeruko/minapp
+          ref: main
+          path: external/minapp
       - name: Validate story format
         run: node novel_starter/test_story_validator.js
       - name: Test Hosted runtime readiness
@@ -31,6 +40,8 @@ jobs:
         run: node novel_editor/test_editor_core.js
       - name: Test Novel asset helpers
         run: node novel_editor/test_asset_tools.js
+      - name: Test real Novel through generic Host Authoring
+        run: python novel_editor/test_host_authoring_roundtrip.py
       - name: Check JavaScript syntax
         run: |
           node --check novel_starter/story-validator.js
