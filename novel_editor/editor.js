@@ -14,23 +14,31 @@
     throw new Error('MinAppNovelAssetTools is not loaded');
   }
 
+  function requiredElement(id) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLElement)) {
+      throw new Error(`Required element #${id} was not found`);
+    }
+    return element;
+  }
+
   const els = {
-    status: document.getElementById('status'),
-    revision: document.getElementById('revision'),
-    contentRevision: document.getElementById('content-revision'),
-    title: document.getElementById('story-title'),
-    startScene: document.getElementById('start-scene'),
-    sceneList: document.getElementById('scene-list'),
-    eventEditor: document.getElementById('event-editor'),
-    assetId: document.getElementById('asset-id'),
-    assetFile: document.getElementById('asset-file'),
-    assetSave: document.getElementById('asset-save-button'),
-    assetList: document.getElementById('asset-list'),
-    assetPreview: document.getElementById('asset-preview'),
-    validation: document.getElementById('validation'),
-    save: document.getElementById('save-button'),
-    preview: document.getElementById('preview-button'),
-    publish: document.getElementById('publish-button'),
+    status: requiredElement('status'),
+    revision: requiredElement('revision'),
+    contentRevision: requiredElement('content-revision'),
+    title: requiredElement('story-title'),
+    startScene: requiredElement('start-scene'),
+    sceneList: requiredElement('scene-list'),
+    eventEditor: requiredElement('event-editor'),
+    assetId: requiredElement('asset-id'),
+    assetFile: requiredElement('asset-file'),
+    assetSave: requiredElement('asset-save-button'),
+    assetList: requiredElement('asset-list'),
+    assetPreview: requiredElement('asset-preview'),
+    validation: requiredElement('validation'),
+    save: requiredElement('save-button'),
+    preview: requiredElement('preview-button'),
+    publish: requiredElement('publish-button'),
   };
 
   let initialized = false;
@@ -42,6 +50,8 @@
   let busy = false;
   let storageValid = false;
   let assetPreviewUrl = null;
+  let characterPanel = null;
+  let characterList = null;
 
   function authoringApi() {
     const minapp = window.minapp;
@@ -95,6 +105,26 @@
     els.assetId.disabled = value || !project || !workingDocument;
     els.assetFile.disabled = value || !project || !workingDocument;
     els.assetSave.disabled = value || !project || !workingDocument || dirty;
+
+    for (const control of document.querySelectorAll('[data-editor-control="true"]')) {
+      if (!(control instanceof HTMLButtonElement || control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement)) {
+        continue;
+      }
+      if (value) {
+        if (!Object.prototype.hasOwnProperty.call(control.dataset, 'editorWasDisabled')) {
+          control.dataset.editorWasDisabled = control.disabled ? '1' : '0';
+        }
+        control.disabled = true;
+      } else if (Object.prototype.hasOwnProperty.call(control.dataset, 'editorWasDisabled')) {
+        control.disabled = control.dataset.editorWasDisabled === '1';
+        delete control.dataset.editorWasDisabled;
+      }
+    }
+  }
+
+  function markEditorControl(element) {
+    element.dataset.editorControl = 'true';
+    return element;
   }
 
   function markDirty() {
@@ -110,6 +140,45 @@
     const code = error && error.code ? error.code : 'editor_error';
     const message = error && error.message ? error.message : String(error);
     return `${code}: ${message}`;
+  }
+
+  function assertEditableNow() {
+    if (busy) {
+      throw Object.assign(new Error('別のAuthoring処理が進行中です'), {
+        code: 'editor_busy',
+      });
+    }
+    if (!project || !workingDocument) {
+      throw Object.assign(new Error('Authoring Project is not loaded'), {
+        code: 'authoring_project_not_loaded',
+      });
+    }
+  }
+
+  function handleUiError(error) {
+    setBusy(false);
+    setStatus(formatError(error), 'error');
+    console.error(error);
+  }
+
+  function runMutation(makeNext, message, nextSelectedSceneId) {
+    try {
+      assertEditableNow();
+      const nextDocument = makeNext();
+      formatApi.validateStory(nextDocument);
+      workingDocument = nextDocument;
+      if (nextSelectedSceneId !== undefined) {
+        selectedSceneId = nextSelectedSceneId;
+      } else if (!workingDocument.scenes[selectedSceneId]) {
+        selectedSceneId = workingDocument.start_scene;
+      }
+      dirty = true;
+      previewedRevision = null;
+      renderProject();
+      setStatus(message, 'dirty');
+    } catch (error) {
+      handleUiError(error);
+    }
   }
 
   function assertOperationalDocument() {
@@ -152,13 +221,88 @@
     return nextRevision;
   }
 
+  function makeButton(text, className, onClick) {
+    const button = markEditorControl(document.createElement('button'));
+    button.type = 'button';
+    button.className = className || 'mini-button';
+    button.textContent = text;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function makeSelect(entries, currentValue, ariaLabel, options) {
+    const opts = options || {};
+    const select = markEditorControl(document.createElement('select'));
+    select.setAttribute('aria-label', ariaLabel);
+    if (opts.emptyLabel !== undefined) {
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = opts.emptyLabel;
+      empty.selected = currentValue === '' || currentValue === undefined;
+      select.appendChild(empty);
+    }
+    for (const entry of entries) {
+      const option = document.createElement('option');
+      option.value = typeof entry === 'string' ? entry : entry.value;
+      option.textContent = typeof entry === 'string' ? entry : entry.label;
+      option.selected = option.value === currentValue;
+      select.appendChild(option);
+    }
+    if (entries.length === 0 && opts.emptyLabel === undefined) select.disabled = true;
+    return select;
+  }
+
+  function assetIds(kind) {
+    if (!workingDocument) return [];
+    return Object.entries(workingDocument.assets)
+      .filter(([, asset]) => asset.kind === kind)
+      .map(([assetId]) => assetId);
+  }
+
+  function sceneIds() {
+    return workingDocument ? Object.keys(workingDocument.scenes) : [];
+  }
+
+  function characterIds() {
+    return workingDocument ? Object.keys(workingDocument.characters) : [];
+  }
+
+  function ensureAuxiliaryPanels() {
+    if (characterPanel) return;
+    const leftPane = els.sceneList.closest('.pane');
+    if (!(leftPane instanceof HTMLElement)) {
+      throw new Error('Scene pane was not found');
+    }
+    characterPanel = document.createElement('section');
+    characterPanel.className = 'side-card';
+    const heading = document.createElement('h3');
+    heading.textContent = 'キャラクター';
+    const note = document.createElement('p');
+    note.textContent = 'キャラID・表情IDはstable IDです。作成後は名前・表情素材を編集できます。';
+    characterList = document.createElement('div');
+    characterList.id = 'character-list';
+    characterPanel.append(heading, note, characterList);
+    els.sceneList.insertAdjacentElement('afterend', characterPanel);
+
+    for (const card of document.querySelectorAll('.side-card')) {
+      const cardHeading = card.querySelector('h3');
+      if (cardHeading && cardHeading.textContent === 'v1 Editorの安全範囲') {
+        const paragraph = card.querySelector('p');
+        if (paragraph) {
+          paragraph.textContent = 'キャラ＋表情、シーン作成、イベント追加・削除・並べ替え、speaker / goto / 立ち絵event編集までEditorから行えます。stable IDそのものは編集しません。';
+        }
+      }
+    }
+  }
+
   function renderProject() {
+    ensureAuxiliaryPanels();
     els.revision.textContent = `Draft r${project.draftRevision}`;
     els.contentRevision.textContent = `Save compatibility ${workingDocument.content_revision}`;
     els.title.value = workingDocument.title;
 
     els.startScene.replaceChildren();
-    for (const sceneId of Object.keys(workingDocument.scenes)) {
+    for (const sceneId of sceneIds()) {
       const option = document.createElement('option');
       option.value = sceneId;
       option.textContent = sceneId;
@@ -170,6 +314,7 @@
       selectedSceneId = workingDocument.start_scene;
     }
     renderSceneList();
+    renderCharacters();
     renderSelectedScene();
     renderAssets();
     validateWorkingDocument();
@@ -178,51 +323,355 @@
 
   function renderSceneList() {
     els.sceneList.replaceChildren();
-    for (const sceneId of Object.keys(workingDocument.scenes)) {
-      const button = document.createElement('button');
+    for (const sceneId of sceneIds()) {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '6px';
+      row.style.alignItems = 'center';
+      row.style.marginBottom = '7px';
+
+      const button = markEditorControl(document.createElement('button'));
       button.type = 'button';
       button.className = 'scene-button';
       button.dataset.selected = String(sceneId === selectedSceneId);
       button.textContent = sceneId;
       button.addEventListener('click', () => {
+        if (busy) return;
         selectedSceneId = sceneId;
         renderSceneList();
         renderSelectedScene();
       });
-      els.sceneList.appendChild(button);
+
+      const remove = makeButton('削除', 'mini-button danger', () => {
+        runMutation(
+          () => core.removeScene(workingDocument, sceneId, formatApi.validateStory),
+          `シーン ${sceneId} を削除しました。保存してください`,
+        );
+      });
+      row.append(button, remove);
+      els.sceneList.appendChild(row);
     }
+
+    const form = document.createElement('div');
+    form.className = 'asset-form';
+    const input = markEditorControl(document.createElement('input'));
+    input.type = 'text';
+    input.maxLength = 64;
+    input.placeholder = 'scene_002';
+    input.setAttribute('aria-label', '新しいシーンID');
+    const add = makeButton('＋ シーン追加', 'secondary', () => {
+      const sceneId = input.value.trim();
+      runMutation(
+        () => core.addScene(workingDocument, sceneId, formatApi.validateStory),
+        `シーン ${sceneId} を追加しました。保存してください`,
+        sceneId,
+      );
+    });
+    form.append(input, add);
+    els.sceneList.appendChild(form);
   }
 
-  function readOnlyField(labelText, value) {
-    const row = document.createElement('div');
-    row.className = 'readonly-row';
-    const label = document.createElement('span');
-    label.textContent = labelText;
-    const code = document.createElement('code');
-    code.textContent = value;
-    row.append(label, code);
-    return row;
+  function renderCharacters() {
+    characterList.replaceChildren();
+    const images = assetIds('image');
+    const characters = Object.entries(workingDocument.characters);
+
+    if (characters.length === 0) {
+      const empty = document.createElement('p');
+      empty.textContent = 'キャラクターはまだいません';
+      characterList.appendChild(empty);
+    }
+
+    for (const [characterId, character] of characters) {
+      const card = document.createElement('div');
+      card.className = 'asset-row';
+      const heading = document.createElement('div');
+      heading.className = 'event-heading';
+      const id = document.createElement('strong');
+      id.textContent = characterId;
+      const removeCharacter = makeButton('キャラ削除', 'mini-button danger', () => {
+        runMutation(
+          () => core.removeCharacter(workingDocument, characterId, formatApi.validateStory),
+          `キャラクター ${characterId} を削除しました。保存してください`,
+        );
+      });
+      heading.append(id, removeCharacter);
+      card.appendChild(heading);
+
+      const nameLabel = document.createElement('label');
+      nameLabel.textContent = '表示名';
+      const nameInput = markEditorControl(document.createElement('input'));
+      nameInput.type = 'text';
+      nameInput.maxLength = 40;
+      nameInput.value = character.name;
+      nameInput.addEventListener('input', () => {
+        if (busy) return;
+        character.name = nameInput.value;
+        markDirty();
+      });
+      nameLabel.appendChild(nameInput);
+      card.appendChild(nameLabel);
+
+      const expressionHeading = document.createElement('strong');
+      expressionHeading.textContent = '表情';
+      card.appendChild(expressionHeading);
+      for (const [expressionId, assetId] of Object.entries(character.expressions)) {
+        const row = document.createElement('div');
+        row.className = 'choice-row';
+        const label = document.createElement('code');
+        label.textContent = expressionId;
+        const select = makeSelect(images, assetId, `${characterId}.${expressionId} の画像素材`);
+        select.addEventListener('change', () => {
+          runMutation(
+            () => core.setCharacterExpression(
+              workingDocument,
+              characterId,
+              expressionId,
+              select.value,
+              formatApi.validateStory,
+            ),
+            `${characterId}.${expressionId} の画像を変更しました。保存してください`,
+          );
+        });
+        const remove = makeButton('削除', 'mini-button danger', () => {
+          runMutation(
+            () => core.removeCharacterExpression(
+              workingDocument,
+              characterId,
+              expressionId,
+              formatApi.validateStory,
+            ),
+            `${characterId}.${expressionId} を削除しました。保存してください`,
+          );
+        });
+        row.append(label, select, remove);
+        card.appendChild(row);
+      }
+
+      const addExpression = document.createElement('div');
+      addExpression.className = 'asset-form';
+      const expressionIdInput = markEditorControl(document.createElement('input'));
+      expressionIdInput.type = 'text';
+      expressionIdInput.maxLength = 64;
+      expressionIdInput.placeholder = 'smile';
+      expressionIdInput.setAttribute('aria-label', `${characterId} の新しい表情ID`);
+      const imageSelect = makeSelect(images, images[0], `${characterId} の新しい表情画像`);
+      const addExpressionButton = makeButton('＋ 表情追加', 'mini-button', () => {
+        const expressionId = expressionIdInput.value.trim();
+        runMutation(
+          () => core.addCharacterExpression(
+            workingDocument,
+            characterId,
+            expressionId,
+            imageSelect.value,
+            formatApi.validateStory,
+          ),
+          `${characterId}.${expressionId} を追加しました。保存してください`,
+        );
+      });
+      addExpressionButton.disabled = images.length === 0;
+      addExpression.append(expressionIdInput, imageSelect, addExpressionButton);
+      card.appendChild(addExpression);
+      characterList.appendChild(card);
+    }
+
+    const create = document.createElement('div');
+    create.className = 'asset-form';
+    const title = document.createElement('strong');
+    title.textContent = '新しいキャラクター';
+    const idInput = markEditorControl(document.createElement('input'));
+    idInput.type = 'text';
+    idInput.maxLength = 64;
+    idInput.placeholder = 'akari';
+    idInput.setAttribute('aria-label', '新しいキャラクターID');
+    const nameInput = markEditorControl(document.createElement('input'));
+    nameInput.type = 'text';
+    nameInput.maxLength = 40;
+    nameInput.placeholder = 'あかり';
+    nameInput.setAttribute('aria-label', '新しいキャラクター名');
+    const expressionInput = markEditorControl(document.createElement('input'));
+    expressionInput.type = 'text';
+    expressionInput.maxLength = 64;
+    expressionInput.placeholder = 'normal';
+    expressionInput.setAttribute('aria-label', '最初の表情ID');
+    const imageSelect = makeSelect(images, images[0], '最初の表情画像');
+    const add = makeButton('＋ キャラ追加', 'secondary', () => {
+      const characterId = idInput.value.trim();
+      runMutation(
+        () => core.addCharacter(
+          workingDocument,
+          characterId,
+          nameInput.value,
+          expressionInput.value.trim(),
+          imageSelect.value,
+          formatApi.validateStory,
+        ),
+        `キャラクター ${characterId} を追加しました。保存してください`,
+      );
+    });
+    add.disabled = images.length === 0;
+    const help = document.createElement('p');
+    help.textContent = images.length === 0
+      ? '先に画像素材を追加してください。'
+      : '最初の表情を1つ指定して作成します。';
+    create.append(title, idInput, nameInput, expressionInput, imageSelect, add, help);
+    characterList.appendChild(create);
   }
 
   function assetSelect(currentAssetId, kind, label, onChange) {
-    const select = document.createElement('select');
-    select.setAttribute('aria-label', label);
-    const candidates = Object.entries(workingDocument.assets).filter(
-      ([, asset]) => asset.kind === kind,
-    );
-    for (const [assetId] of candidates) {
-      const option = document.createElement('option');
-      option.value = assetId;
-      option.textContent = assetId;
-      option.selected = assetId === currentAssetId;
-      select.appendChild(option);
-    }
-    select.disabled = candidates.length === 0;
+    const select = makeSelect(assetIds(kind), currentAssetId, label);
     select.addEventListener('change', () => onChange(select.value));
     return select;
   }
 
-  function renderEditableAssetEvent(card, event) {
+  function sceneSelect(currentSceneId, label, onChange) {
+    const select = makeSelect(sceneIds(), currentSceneId, label);
+    select.addEventListener('change', () => onChange(select.value));
+    return select;
+  }
+
+  function eventHeading(card, event) {
+    const heading = document.createElement('div');
+    heading.className = 'event-heading';
+    const identity = document.createElement('div');
+    identity.style.display = 'flex';
+    identity.style.gap = '8px';
+    identity.style.alignItems = 'center';
+    const type = document.createElement('strong');
+    type.textContent = event.type;
+    const id = document.createElement('code');
+    id.textContent = event.id;
+    identity.append(type, id);
+
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
+    const up = makeButton('↑', 'mini-button', () => {
+      runMutation(
+        () => core.moveEvent(workingDocument, selectedSceneId, event.id, -1, formatApi.validateStory),
+        `${event.id} を上へ移動しました。保存してください`,
+      );
+    });
+    const down = makeButton('↓', 'mini-button', () => {
+      runMutation(
+        () => core.moveEvent(workingDocument, selectedSceneId, event.id, 1, formatApi.validateStory),
+        `${event.id} を下へ移動しました。保存してください`,
+      );
+    });
+    const remove = makeButton('削除', 'mini-button danger', () => {
+      runMutation(
+        () => core.removeEvent(workingDocument, selectedSceneId, event.id, formatApi.validateStory),
+        `${event.id} を削除しました。保存してください`,
+      );
+    });
+    actions.append(up, down, remove);
+    heading.append(identity, actions);
+    card.appendChild(heading);
+  }
+
+  function renderCharacterEvent(card, event) {
+    const actionLabel = document.createElement('label');
+    actionLabel.textContent = 'action';
+    const action = makeSelect(['show', 'hide'], event.action, `${event.id} のcharacter action`);
+    action.addEventListener('change', () => {
+      runMutation(
+        () => core.setCharacterEventAction(
+          workingDocument,
+          selectedSceneId,
+          event.id,
+          action.value,
+          formatApi.validateStory,
+        ),
+        `${event.id} のactionを ${action.value} にしました。保存してください`,
+      );
+    });
+    actionLabel.appendChild(action);
+    card.appendChild(actionLabel);
+
+    const slotLabel = document.createElement('label');
+    slotLabel.textContent = 'slot';
+    const slot = makeSelect(['left', 'center', 'right'], event.slot, `${event.id} のslot`);
+    slot.addEventListener('change', () => {
+      event.slot = slot.value;
+      markDirty();
+    });
+    slotLabel.appendChild(slot);
+    card.appendChild(slotLabel);
+
+    if (event.action === 'hide') return;
+    const characters = characterIds();
+    const characterLabel = document.createElement('label');
+    characterLabel.textContent = 'character';
+    const character = makeSelect(characters, event.character, `${event.id} のcharacter`);
+    character.addEventListener('change', () => {
+      const selected = workingDocument.characters[character.value];
+      if (!selected) {
+        handleUiError(Object.assign(new Error(`character ${character.value} がありません`), { code: 'character_not_found' }));
+        return;
+      }
+      event.character = character.value;
+      event.expression = Object.keys(selected.expressions)[0];
+      markDirty();
+      renderSelectedScene();
+    });
+    characterLabel.appendChild(character);
+    card.appendChild(characterLabel);
+
+    const expressionLabel = document.createElement('label');
+    expressionLabel.textContent = 'expression';
+    const expressionIds = Object.keys(workingDocument.characters[event.character].expressions);
+    const expression = makeSelect(expressionIds, event.expression, `${event.id} のexpression`);
+    expression.addEventListener('change', () => {
+      event.expression = expression.value;
+      markDirty();
+    });
+    expressionLabel.appendChild(expression);
+    card.appendChild(expressionLabel);
+  }
+
+  function renderBgmEvent(card, event) {
+    const actionLabel = document.createElement('label');
+    actionLabel.textContent = 'action';
+    const action = makeSelect(['play', 'stop'], event.action, `${event.id} のBGM action`);
+    action.addEventListener('change', () => {
+      runMutation(
+        () => core.setBgmEventAction(
+          workingDocument,
+          selectedSceneId,
+          event.id,
+          action.value,
+          formatApi.validateStory,
+        ),
+        `${event.id} のBGM actionを ${action.value} にしました。保存してください`,
+      );
+    });
+    actionLabel.appendChild(action);
+    card.appendChild(actionLabel);
+    if (event.action === 'stop') return;
+
+    card.appendChild(
+      assetSelect(event.asset, 'audio', `${event.id} のBGM素材`, (value) => {
+        event.asset = value;
+        markDirty();
+      }),
+    );
+    const loopLabel = document.createElement('label');
+    loopLabel.className = 'inline-check';
+    const checkbox = markEditorControl(document.createElement('input'));
+    checkbox.type = 'checkbox';
+    checkbox.checked = event.loop === true;
+    checkbox.addEventListener('change', () => {
+      event.loop = checkbox.checked;
+      markDirty();
+    });
+    loopLabel.append(checkbox, document.createTextNode('ループ'));
+    card.appendChild(loopLabel);
+  }
+
+  function eventCard(event) {
+    const card = document.createElement('section');
+    card.className = 'event-card';
+    eventHeading(card, event);
+
     if (event.type === 'background') {
       card.appendChild(
         assetSelect(event.asset, 'image', `${event.id} の背景素材`, (value) => {
@@ -230,57 +679,32 @@
           markDirty();
         }),
       );
-      return true;
+      return card;
     }
-    if (event.type === 'se') {
-      card.appendChild(
-        assetSelect(event.asset, 'audio', `${event.id} のSE素材`, (value) => {
-          event.asset = value;
-          markDirty();
-        }),
-      );
-      return true;
-    }
-    if (event.type === 'bgm' && event.action === 'play') {
-      card.appendChild(
-        assetSelect(event.asset, 'audio', `${event.id} のBGM素材`, (value) => {
-          event.asset = value;
-          markDirty();
-        }),
-      );
-      const loopLabel = document.createElement('label');
-      loopLabel.className = 'inline-check';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = event.loop === true;
-      checkbox.addEventListener('change', () => {
-        event.loop = checkbox.checked;
-        markDirty();
-      });
-      loopLabel.append(checkbox, document.createTextNode('ループ'));
-      card.appendChild(loopLabel);
-      return true;
-    }
-    return false;
-  }
 
-  function eventCard(event) {
-    const card = document.createElement('section');
-    card.className = 'event-card';
-    const heading = document.createElement('div');
-    heading.className = 'event-heading';
-    const type = document.createElement('strong');
-    type.textContent = event.type;
-    const id = document.createElement('code');
-    id.textContent = event.id;
-    heading.append(type, id);
-    card.appendChild(heading);
-
-    if (renderEditableAssetEvent(card, event)) return card;
+    if (event.type === 'character') {
+      renderCharacterEvent(card, event);
+      return card;
+    }
 
     if (event.type === 'dialogue') {
-      if (event.speaker) card.appendChild(readOnlyField('speaker', event.speaker));
-      const textarea = document.createElement('textarea');
+      const speakerLabel = document.createElement('label');
+      speakerLabel.textContent = 'speaker';
+      const speaker = makeSelect(
+        characterIds(),
+        event.speaker || '',
+        `${event.id} のspeaker`,
+        { emptyLabel: 'ナレーション（speakerなし）' },
+      );
+      speaker.addEventListener('change', () => {
+        if (speaker.value === '') delete event.speaker;
+        else event.speaker = speaker.value;
+        markDirty();
+      });
+      speakerLabel.appendChild(speaker);
+      card.appendChild(speakerLabel);
+
+      const textarea = markEditorControl(document.createElement('textarea'));
       textarea.rows = 4;
       textarea.value = event.text;
       textarea.setAttribute('aria-label', `${event.id} のセリフ`);
@@ -296,26 +720,83 @@
       for (const option of event.options) {
         const row = document.createElement('div');
         row.className = 'choice-row';
-        const input = document.createElement('input');
+        const input = markEditorControl(document.createElement('input'));
         input.type = 'text';
         input.value = option.label;
+        input.maxLength = 200;
         input.setAttribute('aria-label', `${option.id} の選択肢ラベル`);
         input.addEventListener('input', () => {
           option.label = input.value;
           markDirty();
         });
-        const target = document.createElement('code');
-        target.textContent = `${option.id} → ${option.goto}`;
-        row.append(input, target);
+        const target = sceneSelect(option.goto, `${option.id} のgoto`, (value) => {
+          option.goto = value;
+          markDirty();
+        });
+        const remove = makeButton('削除', 'mini-button danger', () => {
+          runMutation(
+            () => core.removeChoiceOption(
+              workingDocument,
+              selectedSceneId,
+              event.id,
+              option.id,
+              formatApi.validateStory,
+            ),
+            `${event.id}/${option.id} を削除しました。保存してください`,
+          );
+        });
+        const id = document.createElement('code');
+        id.textContent = option.id;
+        row.append(input, target, remove, id);
         card.appendChild(row);
       }
+      const addOption = makeButton('＋ 選択肢追加', 'mini-button', () => {
+        runMutation(
+          () => core.addChoiceOption(
+            workingDocument,
+            selectedSceneId,
+            event.id,
+            formatApi.validateStory,
+          ),
+          `${event.id} に選択肢を追加しました。保存してください`,
+        );
+      });
+      card.appendChild(addOption);
+      return card;
+    }
+
+    if (event.type === 'goto') {
+      const label = document.createElement('label');
+      label.textContent = 'goto';
+      const target = sceneSelect(event.goto, `${event.id} のgoto`, (value) => {
+        event.goto = value;
+        markDirty();
+      });
+      label.appendChild(target);
+      card.appendChild(label);
+      return card;
+    }
+
+    if (event.type === 'bgm') {
+      renderBgmEvent(card, event);
+      return card;
+    }
+
+    if (event.type === 'se') {
+      card.appendChild(
+        assetSelect(event.asset, 'audio', `${event.id} のSE素材`, (value) => {
+          event.asset = value;
+          markDirty();
+        }),
+      );
       return card;
     }
 
     if (event.type === 'end') {
-      const input = document.createElement('input');
+      const input = markEditorControl(document.createElement('input'));
       input.type = 'text';
       input.value = event.label || '';
+      input.maxLength = 100;
       input.placeholder = 'END';
       input.setAttribute('aria-label', `${event.id} のENDラベル`);
       input.addEventListener('input', () => {
@@ -327,18 +808,15 @@
       return card;
     }
 
-    for (const [key, value] of Object.entries(event)) {
-      if (key === 'id' || key === 'type') continue;
-      card.appendChild(
-        readOnlyField(key, typeof value === 'string' ? value : JSON.stringify(value)),
-      );
-    }
-    return card;
+    throw new Error(`Unsupported event type in Editor: ${event.type}`);
   }
 
   function renderSelectedScene() {
     els.eventEditor.replaceChildren();
     const scene = workingDocument.scenes[selectedSceneId];
+    if (!scene) {
+      throw new Error(`Selected scene ${selectedSceneId} was not found`);
+    }
     const heading = document.createElement('div');
     heading.className = 'scene-heading';
     const title = document.createElement('h2');
@@ -350,6 +828,32 @@
     for (const event of scene.events) {
       els.eventEditor.appendChild(eventCard(event));
     }
+
+    const addCard = document.createElement('section');
+    addCard.className = 'event-card';
+    const label = document.createElement('label');
+    label.textContent = 'イベントを追加';
+    const eventType = makeSelect(
+      ['dialogue', 'background', 'character', 'choice', 'goto', 'bgm', 'se', 'end'],
+      'dialogue',
+      '追加するイベント種別',
+    );
+    label.appendChild(eventType);
+    const add = makeButton('＋ イベント追加', 'secondary', () => {
+      runMutation(
+        () => core.addEvent(
+          workingDocument,
+          selectedSceneId,
+          eventType.value,
+          formatApi.validateStory,
+        ),
+        `${eventType.value} eventを追加しました。保存してください`,
+      );
+    });
+    const help = document.createElement('p');
+    help.textContent = '新しいイベントは末尾のchoice / goto / endの直前へ追加します。終端を変える場合は新しい終端eventを追加→並べ替え→古い終端を削除します。';
+    addCard.append(label, add, help);
+    els.eventEditor.appendChild(addCard);
   }
 
   function clearAssetPreview() {
@@ -564,42 +1068,29 @@
 
       const actions = document.createElement('div');
       actions.className = 'asset-actions';
-      const preview = document.createElement('button');
-      preview.type = 'button';
-      preview.className = 'mini-button';
-      preview.textContent = '確認';
-      preview.disabled = !stored || busy;
-      preview.addEventListener('click', async () => {
+      const preview = makeButton('確認', 'mini-button', async () => {
         try {
           await previewAsset(assetId);
         } catch (error) {
-          setStatus(formatError(error), 'error');
+          handleUiError(error);
         }
       });
+      preview.disabled = !stored || busy;
 
-      const replace = document.createElement('button');
-      replace.type = 'button';
-      replace.className = 'mini-button';
-      replace.textContent = '差し替え';
-      replace.disabled = busy || dirty;
-      replace.addEventListener('click', () => {
+      const replace = makeButton('差し替え', 'mini-button', () => {
         els.assetId.value = assetId;
         els.assetFile.click();
       });
+      replace.disabled = busy || dirty;
 
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'mini-button danger';
-      remove.textContent = '削除';
-      remove.disabled = busy || dirty;
-      remove.addEventListener('click', async () => {
+      const remove = makeButton('削除', 'mini-button danger', async () => {
         try {
           await deleteLogicalAsset(assetId);
         } catch (error) {
-          setBusy(false);
-          setStatus(formatError(error), 'error');
+          handleUiError(error);
         }
       });
+      remove.disabled = busy || dirty;
       actions.append(preview, replace, remove);
       row.append(info, actions);
       els.assetList.appendChild(row);
@@ -615,19 +1106,14 @@
       const meta = document.createElement('code');
       meta.textContent = `${serverAsset.path} · ${serverAsset.bytes} bytes`;
       info.append(title, meta);
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'mini-button danger';
-      remove.textContent = '整理';
-      remove.disabled = busy || dirty;
-      remove.addEventListener('click', async () => {
+      const remove = makeButton('整理', 'mini-button danger', async () => {
         try {
           await deleteOrphanAsset(serverAsset.path);
         } catch (error) {
-          setBusy(false);
-          setStatus(formatError(error), 'error');
+          handleUiError(error);
         }
       });
+      remove.disabled = busy || dirty;
       row.append(info, remove);
       els.assetList.appendChild(row);
     }
@@ -765,19 +1251,17 @@
       await loadProject();
     } catch (error) {
       initialized = false;
-      setBusy(false);
-      setStatus(formatError(error), 'error');
-      console.error(error);
+      handleUiError(error);
     }
   }
 
   els.title.addEventListener('input', () => {
-    if (!workingDocument) return;
+    if (!workingDocument || busy) return;
     workingDocument.title = els.title.value;
     markDirty();
   });
   els.startScene.addEventListener('change', () => {
-    if (!workingDocument) return;
+    if (!workingDocument || busy) return;
     workingDocument.start_scene = els.startScene.value;
     markDirty();
   });
@@ -785,9 +1269,7 @@
     try {
       await saveAssetFromForm();
     } catch (error) {
-      setBusy(false);
-      setStatus(formatError(error), 'error');
-      console.error(error);
+      handleUiError(error);
     }
   });
   els.assetFile.addEventListener('change', () => {
@@ -806,9 +1288,7 @@
     try {
       await saveProject();
     } catch (error) {
-      setBusy(false);
-      setStatus(formatError(error), 'error');
-      console.error(error);
+      handleUiError(error);
     }
   });
   els.preview.addEventListener('click', async () => {
@@ -816,18 +1296,14 @@
       await previewProject();
     } catch (error) {
       previewedRevision = null;
-      setBusy(false);
-      setStatus(formatError(error), 'error');
-      console.error(error);
+      handleUiError(error);
     }
   });
   els.publish.addEventListener('click', async () => {
     try {
       await publishProject();
     } catch (error) {
-      setBusy(false);
-      setStatus(formatError(error), 'error');
-      console.error(error);
+      handleUiError(error);
     }
   });
 
