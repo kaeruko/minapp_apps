@@ -87,7 +87,11 @@ function expectCode(fn, code) {
   const original = story();
   const saved = core.prepareDocumentSave(original, format.validateStory);
   assert.strictEqual(original.content_revision, 7);
-  assert.strictEqual(saved.content_revision, 8);
+  assert.strictEqual(
+    saved.content_revision,
+    7,
+    'ordinary Draft saves must not invalidate per-user progress',
+  );
   assert.strictEqual(saved.scenes.start.events[0].id, 'line-1');
 }
 
@@ -117,12 +121,36 @@ function expectCode(fn, code) {
 }
 
 {
+  const preview = {
+    content_format: 'minapp/novel@1',
+    draft_revision: 13,
+    player_app_id: '3'.repeat(32),
+  };
+  assert.strictEqual(
+    core.validatePreviewResponse(preview, 13),
+    '3'.repeat(32),
+  );
+  assert.strictEqual(core.validatePreviewResponse(null, 13), null);
+  expectCode(
+    () => core.validatePreviewResponse({ ...preview, draft_revision: 12 }, 13),
+    'authoring_revision_changed',
+  );
+  expectCode(
+    () => core.validatePreviewResponse({ ...preview, content_id: '1'.repeat(32) }, 13),
+    'invalid_authoring_response',
+  );
+}
+
+{
   const response = {
     content_id: '1'.repeat(32),
     group_id: '2'.repeat(32),
     content_format: 'minapp/novel@1',
     published_version: 4,
     source_revision: 13,
+    published_app_id: '4'.repeat(32),
+    player_app_id: '3'.repeat(32),
+    player_source_version: 2,
     assets: [],
     published_at: '2026-09-06T10:12:00Z',
   };
@@ -133,6 +161,14 @@ function expectCode(fn, code) {
   expectCode(
     () => core.validatePublishResponse({ ...response, source_revision: 12 }, 13, '1'.repeat(32)),
     'authoring_revision_changed',
+  );
+  expectCode(
+    () => {
+      const oldResponse = { ...response };
+      delete oldResponse.player_source_version;
+      core.validatePublishResponse(oldResponse, 13, '1'.repeat(32));
+    },
+    'invalid_authoring_response',
   );
 }
 
@@ -161,7 +197,7 @@ function expectCode(fn, code) {
   assert.deepStrictEqual(
     editorValidator,
     playerValidator,
-    'Editor and Player must use the exact same minapp/novel@1 validator',
+    'Editor and Player packaged validators must remain byte-identical',
   );
 }
 
