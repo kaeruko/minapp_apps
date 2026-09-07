@@ -55,13 +55,13 @@
   function setBusy(value) {
     busy = value;
     els.save.disabled = value || !project || !dirty;
-    els.publish.disabled = value || !project || dirty;
-    els.title.disabled = value || !project;
-    els.startScene.disabled = value || !project;
+    els.publish.disabled = value || !project || !workingDocument || dirty;
+    els.title.disabled = value || !project || !workingDocument;
+    els.startScene.disabled = value || !project || !workingDocument;
   }
 
   function markDirty() {
-    if (!project || busy) return;
+    if (!project || !workingDocument || busy) return;
     dirty = true;
     setBusy(false);
     setStatus('未保存の変更があります', 'dirty');
@@ -240,6 +240,28 @@
     }
   }
 
+  async function initializeEmptyProject(api) {
+    const initialDocument = core.createInitialDocument();
+    formatApi.validateStory(initialDocument);
+    const expectedRevision = project.draftRevision;
+    setStatus('新しい作品を初期化しています…');
+    const response = await api.save(initialDocument, { expectedRevision });
+    const nextRevision = core.validateSaveResponse(
+      response,
+      expectedRevision,
+      project.contentId,
+    );
+    project.draftRevision = nextRevision;
+    project.assets = core.deepClone(response.assets);
+    project.document = core.deepClone(initialDocument);
+    project.needsInitialization = false;
+    workingDocument = core.deepClone(initialDocument);
+    selectedSceneId = workingDocument.start_scene;
+    dirty = false;
+    renderProject();
+    setStatus(`新しい作品を Draft r${nextRevision} として初期化しました`, 'ok');
+  }
+
   async function loadProject() {
     const api = authoringApi();
     if (!api) return false;
@@ -247,6 +269,10 @@
     setStatus('作品を読み込んでいます…');
     const payload = await api.load();
     project = core.validateProject(payload, formatApi.validateStory);
+    if (project.needsInitialization) {
+      await initializeEmptyProject(api);
+      return true;
+    }
     workingDocument = core.deepClone(project.document);
     selectedSceneId = workingDocument.start_scene;
     dirty = false;
