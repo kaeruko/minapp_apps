@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://minapp.cloxs.jp/formats/minapp-novel-1.schema.json",
+  "title": "MinApp Novel v1",
+  "description": "Master Data contract for content_format minapp/novel@1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content_format",
+    "schema_version",
+    "content_revision",
+    "title",
+    "start_scene",
+    "assets",
+    "characters",
+    "scenes"
+  ],
+  "properties": {
+    "content_format": {
+      "const": "minapp/novel@1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "content_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "start_scene": {
+      "$ref": "#/$defs/id"
+    },
+    "assets": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "characters": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/character"
+      }
+    },
+    "scenes": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/scene"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "src"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "image",
+            "audio"
+          ]
+        },
+        "src": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[?#]).+$"
+        },
+        "mime": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
+            "audio/mpeg",
+            "audio/mp4",
+            "audio/ogg",
+            "audio/wav"
+          ]
+        },
+        "alt": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "expressions"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "expressions": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "events"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/event"
+          }
+        }
+      }
+    },
+    "eventBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "backgroundEvent": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/eventBase"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "asset"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "type": {
+              "const": "background"
+            },
+            "asset": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "characterEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "action",
+            "slot",
+            "character",
+            "expression"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "type": {
+              "const": "character"
+            },
+            "action": {
+              "const": "show"
+            },
+            "slot": {
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "character": {
+              "$ref": "#/$defs/id"
+            },
+            "expression": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "action",
+            "slot"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "type": {
+              "const": "character"
+            },
+            "action": {
+              "const": "hide"
+            },
+            "slot": {
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "dialogueEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "const": "dialogue"
+        },
+        "speaker": {
+          "$ref": "#/$defs/id"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      }
+    },
+    "choiceOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "goto"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "goto": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "choiceEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "options"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "const": "choice"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/choiceOption"
+          }
+        }
+      }
+    },
+    "bgmEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "action",
+            "asset"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "type": {
+              "const": "bgm"
+            },
+            "action": {
+              "const": "play"
+            },
+            "asset": {
+              "$ref": "#/$defs/id"
+            },
+            "loop": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "type",
+            "action"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "type": {
+              "const": "bgm"
+            },
+            "action": {
+              "const": "stop"
+            }
+          }
+        }
+      ]
+    },
+    "seEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "asset"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "const": "se"
+        },
+        "asset": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "endEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "const": "end"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "event": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/backgroundEvent"
+        },
+        {
+          "$ref": "#/$defs/characterEvent"
+        },
+        {
+          "$ref": "#/$defs/dialogueEvent"
+        },
+        {
+          "$ref": "#/$defs/choiceEvent"
+        },
+        {
+          "$ref": "#/$defs/gotoEvent"
+        },
+        {
+          "$ref": "#/$defs/bgmEvent"
+        },
+        {
+          "$ref": "#/$defs/seEvent"
+        },
+        {
+          "$ref": "#/$defs/endEvent"
+        }
+      ]
+    },
+    "gotoEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "goto"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "const": "goto"
+        },
+        "goto": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    }
+  }
+}
