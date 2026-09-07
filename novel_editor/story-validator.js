@@ -13,7 +13,7 @@
   const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
   const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
   const AUDIO_MIMES = new Set(['audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav']);
-  const EVENT_TYPES = new Set(['background', 'character', 'dialogue', 'choice', 'bgm', 'se', 'end']);
+  const EVENT_TYPES = new Set(['background', 'character', 'dialogue', 'choice', 'goto', 'bgm', 'se', 'end']);
   const SLOTS = new Set(['left', 'center', 'right']);
 
   class NovelFormatError extends Error {
@@ -188,6 +188,11 @@
         });
         return;
       }
+      case 'goto':
+        requireExactKeys(event, ['id', 'type', 'goto'], ['id', 'type', 'goto'], path);
+        requireId(event.goto, `${path}.goto`);
+        context.gotos.push({ path: `${path}.goto`, target: event.goto });
+        return;
       case 'bgm':
         requireExactKeys(event, ['id', 'type', 'action', 'asset', 'loop'], ['id', 'type', 'action'], path);
         if (event.action !== 'play' && event.action !== 'stop') fail('invalid_value', `${path}.action`, 'must be play or stop');
@@ -245,8 +250,8 @@
       if (events.length === 0) fail('invalid_value', `${path}.events`, 'at least one event is required');
       events.forEach((event, index) => validateEvent(event, `${path}.events[${index}]`, context));
       const lastType = events[events.length - 1].type;
-      if (lastType !== 'choice' && lastType !== 'end') {
-        fail('unterminated_scene', `${path}.events`, 'last event must be choice or end');
+      if (lastType !== 'choice' && lastType !== 'goto' && lastType !== 'end') {
+        fail('unterminated_scene', `${path}.events`, 'last event must be choice, goto, or end');
       }
     }
 
