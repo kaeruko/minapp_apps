@@ -10,6 +10,7 @@
   'use strict';
 
   const FORMAT = 'minapp/novel@1';
+  const APP_ID_RE = /^[0-9a-f]{32}$/;
   const PROJECT_FIELDS = new Set([
     'content_id',
     'group_id',
@@ -31,12 +32,20 @@
     'created_at',
     'updated_at',
   ]);
+  const PREVIEW_RESPONSE_FIELDS = new Set([
+    'content_format',
+    'draft_revision',
+    'player_app_id',
+  ]);
   const PUBLISH_RESPONSE_FIELDS = new Set([
     'content_id',
     'group_id',
     'content_format',
     'published_version',
     'source_revision',
+    'published_app_id',
+    'player_app_id',
+    'player_source_version',
     'assets',
     'published_at',
   ]);
@@ -83,6 +92,14 @@
     return value;
   }
 
+  function requireAppId(value, context) {
+    requireString(value, context);
+    if (!APP_ID_RE.test(value)) {
+      fail('invalid_authoring_response', `${context} must be a 32-character lowercase hexadecimal app id`);
+    }
+    return value;
+  }
+
   function requireFormat(value) {
     if (value !== FORMAT) {
       fail('unsupported_content_format', `Editor requires exact ${FORMAT}`);
@@ -93,6 +110,9 @@
     return {
       content_format: FORMAT,
       schema_version: 1,
+      // content_revision is the save-compatibility epoch used by the Player.
+      // Ordinary text/scene edits do not change it. Bump it only for a deliberate
+      // breaking change that must invalidate existing per-user progress.
       content_revision: 1,
       title: '新しいノベル',
       start_scene: 'scene_001',
@@ -168,11 +188,7 @@
     }
     const next = deepClone(document);
     requireFormat(next.content_format);
-    const currentContentRevision = requirePositiveInteger(
-      next.content_revision,
-      'document.content_revision',
-    );
-    next.content_revision = currentContentRevision + 1;
+    requirePositiveInteger(next.content_revision, 'document.content_revision');
     return validateStory(next);
   }
 
@@ -195,6 +211,17 @@
     return payload.draft_revision;
   }
 
+  function validatePreviewResponse(payload, expectedRevision) {
+    requirePositiveInteger(expectedRevision, 'expectedRevision');
+    if (payload === null) return null;
+    requireExactFields(payload, PREVIEW_RESPONSE_FIELDS, 'Authoring preview response');
+    requireFormat(payload.content_format);
+    if (payload.draft_revision !== expectedRevision) {
+      fail('authoring_revision_changed', 'Preview draft revision does not match requested draft revision');
+    }
+    return requireAppId(payload.player_app_id, 'player_app_id');
+  }
+
   function validatePublishResponse(payload, expectedRevision, expectedContentId) {
     requirePositiveInteger(expectedRevision, 'expectedRevision');
     requireExactFields(payload, PUBLISH_RESPONSE_FIELDS, 'Authoring publish response');
@@ -206,6 +233,9 @@
       fail('authoring_revision_changed', 'Published source revision does not match requested draft revision');
     }
     requirePositiveInteger(payload.published_version, 'published_version');
+    requirePositiveInteger(payload.player_source_version, 'player_source_version');
+    requireAppId(payload.published_app_id, 'published_app_id');
+    requireAppId(payload.player_app_id, 'player_app_id');
     if (!Array.isArray(payload.assets)) {
       fail('invalid_authoring_response', 'assets must be a list');
     }
@@ -224,6 +254,7 @@
     validateProject,
     prepareDocumentSave,
     validateSaveResponse,
+    validatePreviewResponse,
     validatePublishResponse,
     deepClone,
   };
