@@ -57,6 +57,10 @@
     return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
 
+  function isEmptyObject(value) {
+    return isObject(value) && Object.keys(value).length === 0;
+  }
+
   function requireExactFields(value, expected, context) {
     if (!isObject(value)) fail('invalid_authoring_response', `${context} must be an object`);
     const actual = Object.keys(value);
@@ -85,6 +89,35 @@
     }
   }
 
+  function createInitialDocument() {
+    return {
+      content_format: FORMAT,
+      schema_version: 1,
+      content_revision: 1,
+      title: '新しいノベル',
+      start_scene: 'scene_001',
+      assets: {},
+      characters: {},
+      scenes: {
+        scene_001: {
+          id: 'scene_001',
+          events: [
+            {
+              id: 'event_001',
+              type: 'dialogue',
+              text: 'ここから物語をはじめよう。',
+            },
+            {
+              id: 'event_002',
+              type: 'end',
+              label: 'END',
+            },
+          ],
+        },
+      },
+    };
+  }
+
   function validateProject(payload, validateStory) {
     if (typeof validateStory !== 'function') {
       throw new TypeError('validateStory must be a function');
@@ -105,12 +138,24 @@
     if (!isObject(payload.document)) {
       fail('invalid_authoring_response', 'document must be an object');
     }
+
+    if (isEmptyObject(payload.document)) {
+      return {
+        contentId: payload.content_id,
+        draftRevision: payload.draft_revision,
+        document: null,
+        assets: deepClone(payload.assets),
+        needsInitialization: true,
+      };
+    }
+
     const document = validateStory(payload.document);
     return {
       contentId: payload.content_id,
       draftRevision: payload.draft_revision,
       document: deepClone(document),
       assets: deepClone(payload.assets),
+      needsInitialization: false,
     };
   }
 
@@ -175,6 +220,7 @@
   return {
     FORMAT,
     NovelEditorContractError,
+    createInitialDocument,
     validateProject,
     prepareDocumentSave,
     validateSaveResponse,
