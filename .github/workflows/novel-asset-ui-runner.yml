@@ -1,0 +1,60 @@
+name: Run Novel asset UI migration
+
+on:
+  push:
+    branches:
+      - chatgpt/novel-v1-player-foundation
+    paths:
+      - '.github/workflows/novel-asset-ui-runner.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/novel-v1-player-foundation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply reviewed asset UI migration
+        shell: python
+        run: |
+          from pathlib import Path
+          source = Path('.github/workflows/novel-asset-ui-apply.yml').read_text()
+          marker = "      - name: Apply asset UI\n        shell: python\n        run: |\n"
+          end_marker = "\n      - name: Test Novel implementation\n"
+          if source.count(marker) != 1 or source.count(end_marker) != 1:
+              raise RuntimeError('Cannot extract Novel asset UI migration')
+          block = source.split(marker, 1)[1].split(end_marker, 1)[0]
+          lines = []
+          for line in block.splitlines():
+              if line and not line.startswith('          '):
+                  raise RuntimeError(f'Unexpected migration indentation: {line!r}')
+              lines.append(line[10:] if line else '')
+          exec(compile('\n'.join(lines), 'novel-asset-ui-migration.py', 'exec'), {'__name__': '__novel_asset_ui__'})
+          Path('.github/workflows/novel-asset-ui-runner.yml').unlink()
+      - name: Test Novel implementation
+        run: |
+          node novel_starter/test_story_validator.js
+          node novel_starter/test_player_runtime_ready.js
+          node novel_editor/test_editor_core.js
+          node novel_editor/test_asset_tools.js
+          node --check novel_starter/story-validator.js
+          node --check novel_starter/player.js
+          node --check novel_editor/story-validator.js
+          node --check novel_editor/editor-core.js
+          node --check novel_editor/asset-tools.js
+          node --check novel_editor/editor.js
+      - name: Commit product changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "#1 add Novel Authoring asset editing UI"
+          git push origin HEAD:chatgpt/novel-v1-player-foundation
