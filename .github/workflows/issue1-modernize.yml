@@ -1,0 +1,50 @@
+name: Issue 1 Novel modernization
+
+on:
+  push:
+    branches:
+      - chatgpt/novel-v1-player-foundation
+    paths:
+      - .github/issue1_modernize.py
+      - .github/workflows/issue1-modernize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  modernize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: chatgpt/novel-v1-player-foundation
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply fail-fast migration
+        run: python .github/issue1_modernize.py
+      - name: Test Novel format and Player
+        run: |
+          node novel_starter/test_story_validator.js
+          node novel_starter/test_player_runtime_ready.js
+          node novel_editor/test_editor_core.js
+      - name: Check JavaScript syntax
+        run: |
+          node --check novel_starter/story-validator.js
+          node --check novel_starter/player.js
+          node --check novel_editor/story-validator.js
+          node --check novel_editor/editor-core.js
+          node --check novel_editor/editor.js
+      - name: Commit generated changes
+        run: |
+          set -euo pipefail
+          rm .github/issue1_modernize.py .github/workflows/issue1-modernize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "No generated changes"; exit 1; }
+          git commit -m "#1 complete Novel v1 goto runtime contract"
+          git push origin HEAD:chatgpt/novel-v1-player-foundation
