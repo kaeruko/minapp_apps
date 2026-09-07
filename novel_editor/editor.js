@@ -21,6 +21,7 @@
     assetList: document.getElementById('asset-list'),
     validation: document.getElementById('validation'),
     save: document.getElementById('save-button'),
+    preview: document.getElementById('preview-button'),
     publish: document.getElementById('publish-button'),
   };
 
@@ -28,6 +29,7 @@
   let project = null;
   let workingDocument = null;
   let selectedSceneId = null;
+  let previewedRevision = null;
   let dirty = false;
   let busy = false;
 
@@ -38,9 +40,10 @@
     if (
       typeof api.load !== 'function' ||
       typeof api.save !== 'function' ||
+      typeof api.preview !== 'function' ||
       typeof api.publish !== 'function'
     ) {
-      throw Object.assign(new Error('minapp.authoring.load/save/publish are required'), {
+      throw Object.assign(new Error('minapp.authoring.load/save/preview/publish are required'), {
         code: 'authoring_bridge_incomplete',
       });
     }
@@ -55,7 +58,13 @@
   function setBusy(value) {
     busy = value;
     els.save.disabled = value || !project || !dirty;
-    els.publish.disabled = value || !project || !workingDocument || dirty;
+    els.preview.disabled = value || !project || !workingDocument || dirty;
+    els.publish.disabled =
+      value ||
+      !project ||
+      !workingDocument ||
+      dirty ||
+      previewedRevision !== project.draftRevision;
     els.title.disabled = value || !project || !workingDocument;
     els.startScene.disabled = value || !project || !workingDocument;
   }
@@ -63,6 +72,7 @@
   function markDirty() {
     if (!project || !workingDocument || busy) return;
     dirty = true;
+    previewedRevision = null;
     setBusy(false);
     setStatus('未保存の変更があります', 'dirty');
     validateWorkingDocument();
@@ -89,7 +99,7 @@
 
   function renderProject() {
     els.revision.textContent = `Draft r${project.draftRevision}`;
-    els.contentRevision.textContent = `Story r${workingDocument.content_revision}`;
+    els.contentRevision.textContent = `Save compatibility ${workingDocument.content_revision}`;
     els.title.value = workingDocument.title;
 
     els.startScene.replaceChildren();
@@ -257,6 +267,7 @@
     project.needsInitialization = false;
     workingDocument = core.deepClone(initialDocument);
     selectedSceneId = workingDocument.start_scene;
+    previewedRevision = null;
     dirty = false;
     renderProject();
     setStatus(`新しい作品を Draft r${nextRevision} として初期化しました`, 'ok');
@@ -275,9 +286,10 @@
     }
     workingDocument = core.deepClone(project.document);
     selectedSceneId = workingDocument.start_scene;
+    previewedRevision = null;
     dirty = false;
     renderProject();
-    setStatus('読み込みました', 'ok');
+    setStatus('読み込みました。公開前にPreviewしてください', 'ok');
     return true;
   }
 
@@ -311,9 +323,45 @@
     project.draftRevision = nextRevision;
     project.assets = core.deepClone(response.assets);
     workingDocument = core.deepClone(documentToSave);
+    previewedRevision = null;
     dirty = false;
     renderProject();
-    setStatus(`Draft r${nextRevision} を保存しました`, 'ok');
+    setStatus(`Draft r${nextRevision} を保存しました。公開前にPreviewしてください`, 'ok');
+  }
+
+  async function previewProject() {
+    if (!project || !workingDocument) {
+      throw Object.assign(new Error('Authoring Project is not loaded'), {
+        code: 'authoring_project_not_loaded',
+      });
+    }
+    if (dirty) {
+      throw Object.assign(new Error('Preview前に変更を保存してください'), {
+        code: 'unsaved_changes',
+      });
+    }
+    formatApi.validateStory(workingDocument);
+    const api = authoringApi();
+    if (!api) {
+      throw Object.assign(new Error('Authoring bridge is unavailable'), {
+        code: 'authoring_unavailable',
+      });
+    }
+
+    setBusy(true);
+    setStatus('Previewを開いています…');
+    const expectedRevision = project.draftRevision;
+    const response = await api.preview({ expectedRevision });
+    const playerAppId = core.validatePreviewResponse(response, expectedRevision);
+    if (playerAppId === null) {
+      previewedRevision = null;
+      setBusy(false);
+      setStatus('Previewをキャンセルしました', 'waiting');
+      return;
+    }
+    previewedRevision = expectedRevision;
+    setBusy(false);
+    setStatus(`Draft r${expectedRevision} をPreviewしました`, 'ok');
   }
 
   async function publishProject() {
@@ -325,6 +373,11 @@
     if (dirty) {
       throw Object.assign(new Error('公開前に変更を保存してください'), {
         code: 'unsaved_changes',
+      });
+    }
+    if (previewedRevision !== project.draftRevision) {
+      throw Object.assign(new Error('現在のDraftをPreviewしてから公開してください'), {
+        code: 'preview_required',
       });
     }
     formatApi.validateStory(workingDocument);
@@ -380,6 +433,16 @@
     try {
       await saveProject();
     } catch (error) {
+      setBusy(false);
+      setStatus(formatError(error), 'error');
+      console.error(error);
+    }
+  });
+  els.preview.addEventListener('click', async () => {
+    try {
+      await previewProject();
+    } catch (error) {
+      previewedRevision = null;
       setBusy(false);
       setStatus(formatError(error), 'error');
       console.error(error);
