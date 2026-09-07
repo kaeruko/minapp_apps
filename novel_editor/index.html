@@ -197,6 +197,46 @@
     }
 
     #asset-list { display: grid; gap: 8px; }
+    .asset-form { display: grid; gap: 8px; margin: 10px 0 12px; }
+    .asset-form label { margin: 0; }
+    .asset-row {
+      display: grid;
+      gap: 7px;
+      padding: 9px;
+      border: 1px solid #ddd1e7;
+      border-radius: 10px;
+      background: white;
+    }
+    .asset-row > div:first-child { display: grid; gap: 4px; min-width: 0; }
+    .asset-row.orphan { border-style: dashed; background: #fff9ed; }
+    .asset-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mini-button {
+      border: 0;
+      border-radius: 9px;
+      padding: 6px 9px;
+      background: #eee5f7;
+      color: #4a355d;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mini-button.danger { background: #ffe3e3; color: #8a2222; }
+    #asset-preview { display: grid; gap: 7px; margin-top: 10px; }
+    #asset-preview img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #f3eef7;
+    }
+    #asset-preview audio { width: 100%; }
+    .inline-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 12px;
+    }
+    .inline-check input { width: auto; }
     #validation[data-kind="ok"] { color: #24663c; }
     #validation[data-kind="error"] { color: #9a2d2d; }
 
@@ -272,7 +312,20 @@
         </section>
         <section class="side-card">
           <h3>素材</h3>
+          <div class="asset-form">
+            <label>
+              素材ID
+              <input id="asset-id" type="text" maxlength="64" placeholder="classroom / akari_smile / bgm01" disabled>
+            </label>
+            <label>
+              画像・BGM・SEファイル
+              <input id="asset-file" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.mp3,.m4a,.ogg,.wav,image/png,image/jpeg,image/gif,image/webp,audio/mpeg,audio/mp4,audio/ogg,audio/wav" disabled>
+            </label>
+            <button id="asset-save-button" class="secondary" type="button" disabled>追加 / 差し替え</button>
+            <p>同じ素材IDを指定すると差し替えます。素材変更はDraftへ保存され、revision競合時は自動上書きしません。</p>
+          </div>
           <div id="asset-list"><p>未読込</p></div>
+          <div id="asset-preview"></div>
         </section>
         <section class="side-card">
           <h3>Preview</h3>
@@ -283,7 +336,7 @@
         <section class="side-card">
           <h3>v1 Editorの安全範囲</h3>
           <p>
-            stable scene/event/choice IDと遷移先は表示のみです。現在編集できるのはタイトル、開始シーン、セリフ、選択肢ラベル、ENDラベルです。
+            stable IDは維持します。タイトル、開始シーン、セリフ、選択肢ラベル、ENDラベルに加え、背景/BGM/SEの素材選択と画像・音声素材の追加・差し替え・削除ができます。
           </p>
         </section>
       </aside>
@@ -292,6 +345,7 @@
 
   <script src="story-validator.js"></script>
   <script src="editor-core.js"></script>
+  <script src="asset-tools.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>
