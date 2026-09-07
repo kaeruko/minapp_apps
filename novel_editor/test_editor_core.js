@@ -50,8 +50,37 @@ function expectCode(fn, code) {
   const result = core.validateProject(loaded, format.validateStory);
   assert.strictEqual(result.contentId, loaded.content_id);
   assert.strictEqual(result.draftRevision, 12);
+  assert.strictEqual(result.needsInitialization, false);
   assert.deepStrictEqual(result.document, loaded.document);
   assert.notStrictEqual(result.document, loaded.document);
+}
+
+{
+  const empty = project();
+  empty.document = {};
+  const result = core.validateProject(empty, format.validateStory);
+  assert.strictEqual(result.contentId, empty.content_id);
+  assert.strictEqual(result.draftRevision, 12);
+  assert.strictEqual(result.needsInitialization, true);
+  assert.strictEqual(result.document, null);
+}
+
+{
+  const malformed = project();
+  malformed.document = { title: 'Host must not fill the schema' };
+  assert.throws(() => core.validateProject(malformed, format.validateStory));
+}
+
+{
+  const initial = core.createInitialDocument();
+  const validated = format.validateStory(initial);
+  assert.strictEqual(validated.content_format, 'minapp/novel@1');
+  assert.strictEqual(validated.schema_version, 1);
+  assert.strictEqual(validated.content_revision, 1);
+  assert.strictEqual(validated.title, '新しいノベル');
+  assert.strictEqual(validated.start_scene, 'scene_001');
+  assert.strictEqual(validated.scenes.scene_001.events[0].type, 'dialogue');
+  assert.strictEqual(validated.scenes.scene_001.events[1].type, 'end');
 }
 
 {
