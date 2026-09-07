@@ -29,10 +29,13 @@ jobs:
         run: node novel_starter/test_player_runtime_ready.js
       - name: Test Editor Authoring contract
         run: node novel_editor/test_editor_core.js
+      - name: Test Novel asset helpers
+        run: node novel_editor/test_asset_tools.js
       - name: Check JavaScript syntax
         run: |
           node --check novel_starter/story-validator.js
           node --check novel_starter/player.js
           node --check novel_editor/story-validator.js
           node --check novel_editor/editor-core.js
+          node --check novel_editor/asset-tools.js
           node --check novel_editor/editor.js
