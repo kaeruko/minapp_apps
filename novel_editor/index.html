@@ -149,14 +149,8 @@
       gap: 10px;
     }
 
-    .scene-heading {
-      margin-bottom: 12px;
-    }
-
-    .scene-heading span {
-      font-size: 11px;
-      color: #756582;
-    }
+    .scene-heading { margin-bottom: 12px; }
+    .scene-heading span { font-size: 11px; color: #756582; }
 
     .event-card {
       display: grid;
@@ -202,11 +196,7 @@
       line-height: 1.55;
     }
 
-    #asset-list {
-      display: grid;
-      gap: 8px;
-    }
-
+    #asset-list { display: grid; gap: 8px; }
     #validation[data-kind="ok"] { color: #24663c; }
     #validation[data-kind="error"] { color: #9a2d2d; }
 
@@ -220,9 +210,7 @@
     }
 
     @media (max-width: 900px) {
-      .workspace {
-        grid-template-columns: 180px minmax(0, 1fr);
-      }
+      .workspace { grid-template-columns: 180px minmax(0, 1fr); }
       .pane:last-child {
         grid-column: 1 / -1;
         border-top: 1px solid #ded4e8;
@@ -246,12 +234,13 @@
         <h1>📖 ノベルゲームメーカー</h1>
         <div class="header-meta">
           <span id="revision" class="pill">Draft -</span>
-          <span id="content-revision" class="pill">Story -</span>
+          <span id="content-revision" class="pill">Save compatibility -</span>
           <span id="status" class="pill" data-kind="waiting">ホスト接続待ち</span>
         </div>
       </div>
       <div class="actions">
         <button id="save-button" class="secondary" type="button" disabled>保存</button>
+        <button id="preview-button" class="secondary" type="button" disabled>Preview</button>
         <button id="publish-button" class="primary" type="button" disabled>公開</button>
       </div>
     </header>
@@ -288,13 +277,13 @@
         <section class="side-card">
           <h3>Preview</h3>
           <p class="preview-note">
-            Editor内に別Playerは実装しません。Draft Previewは本番と同じNovel Playerを使う共通Host経路へ接続します。
+            PreviewはEditor内の別実装ではなく、Hostが選んだ本番と同じNovel Playerで現在のDraftを再生します。Previewに成功した同じDraftだけを公開できます。
           </p>
         </section>
         <section class="side-card">
           <h3>v1 Editorの安全範囲</h3>
           <p>
-            stable scene/event/choice IDとgotoは表示のみです。現在編集できるのはタイトル、開始シーン、セリフ、選択肢ラベル、ENDラベルです。
+            stable scene/event/choice IDと遷移先は表示のみです。現在編集できるのはタイトル、開始シーン、セリフ、選択肢ラベル、ENDラベルです。
           </p>
         </section>
       </aside>
