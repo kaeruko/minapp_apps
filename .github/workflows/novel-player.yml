@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: kaeruko/minapp
-          ref: main
+          ref: f81079199057323f057534db1886fae66a7e49de
           path: external/minapp
       - name: Validate story format
         run: node novel_starter/test_story_validator.js
