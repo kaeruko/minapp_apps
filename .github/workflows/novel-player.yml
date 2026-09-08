@@ -40,6 +40,8 @@ jobs:
         run: node novel_editor/test_editor_core.js
       - name: Test Novel asset helpers
         run: node novel_editor/test_asset_tools.js
+      - name: Test Novel Editor recovery
+        run: node novel_editor/test_editor_resilience.js
       - name: Test real Novel through generic Host Authoring
         run: python novel_editor/test_host_authoring_roundtrip.py
       - name: Check JavaScript syntax
@@ -49,4 +51,5 @@ jobs:
           node --check novel_editor/story-validator.js
           node --check novel_editor/editor-core.js
           node --check novel_editor/asset-tools.js
+          node --check novel_editor/editor-resilience.js
           node --check novel_editor/editor.js
