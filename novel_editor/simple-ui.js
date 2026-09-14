@@ -7,6 +7,13 @@
   });
   const FIELD_LABELS = Object.freeze({ speaker: '話す人', action: '動き', slot: '位置', character: 'キャラクター', expression: '表情', goto: '移動先' });
   const OPTION_LABELS = Object.freeze({ show: '表示する', hide: '隠す', left: '左', center: '中央', right: '右', play: '再生する', stop: '停止する' });
+  const SIMPLE_VIEWS = Object.freeze(['scenes', 'editor', 'settings', 'publish']);
+  const SHORT_STATUS_MESSAGES = new Set([
+    '作品を読み込んでいます',
+    '読み込みました',
+    '保存しました',
+    '変更があります',
+  ]);
 
   const sceneList = required('scene-list');
   const eventEditor = required('event-editor');
@@ -15,11 +22,23 @@
   const openSettings = required('open-project-settings');
   const closeSettings = required('close-project-settings');
   const sceneBack = required('scene-back');
+  const status = required('status');
+  const previewButton = requiredButton('preview-button');
+  const publishButton = requiredButton('publish-button');
+  const workspace = document.querySelector('.workspace');
+  const app = document.querySelector('.app');
+  if (!(workspace instanceof HTMLElement) || !(app instanceof HTMLElement)) {
+    throw new Error('Simple UI requires .app and .workspace');
+  }
 
   let scheduled = false;
   let effectsOverlay = null;
   let effectsSelect = null;
   let effectsAddButton = null;
+  let footerNav = null;
+  let previewProxy = null;
+  let publishProxy = null;
+  let publishHint = null;
 
   function required(id) {
     const element = document.getElementById(id);
@@ -27,10 +46,183 @@
     return element;
   }
 
+  function requiredButton(id) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLButtonElement)) throw new Error(`Simple UI requires button #${id}`);
+    return element;
+  }
+
+  function ensureMobileChrome() {
+    if (!document.getElementById('simple-mobile-chrome-style')) {
+      const style = document.createElement('style');
+      style.id = 'simple-mobile-chrome-style';
+      style.textContent = `
+        .editor-footer, .publish-pane, .mobile-project-preview { display: none; }
+        @media (max-width: 900px) {
+          .app { grid-template-rows: auto minmax(0, 1fr) auto; }
+          .settings-launch { display: none !important; }
+          header .actions #preview-button,
+          header .actions #publish-button { display: none !important; }
+          .mobile-project-preview { display: block; margin: 14px 0 10px; }
+          .mobile-project-preview > button { width: 100%; min-height: 52px; font-size: 15px; }
+          .publish-pane { display: none; }
+          body[data-simple-view="scenes"] .publish-pane,
+          body[data-simple-view="editor"] .publish-pane,
+          body[data-simple-view="settings"] .publish-pane { display: none !important; }
+          body[data-simple-view="publish"] .scene-pane,
+          body[data-simple-view="publish"] .editor-pane,
+          body[data-simple-view="publish"] .settings-pane { display: none !important; }
+          body[data-simple-view="publish"] .publish-pane { display: block !important; }
+          .pane { min-height: calc(100dvh - 154px); }
+          .editor-footer {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 2px;
+            position: sticky;
+            bottom: 0;
+            z-index: 40;
+            padding: 7px 8px max(7px, env(safe-area-inset-bottom));
+            border-top: 1px solid #eaddea;
+            background: rgba(255, 250, 252, .96);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 -8px 24px rgba(84, 57, 91, .08);
+          }
+          .editor-footer button {
+            min-width: 0;
+            min-height: 52px;
+            display: grid;
+            place-items: center;
+            gap: 1px;
+            padding: 4px 2px;
+            border: 0;
+            border-radius: 14px;
+            background: transparent;
+            color: #725f79;
+            font-size: 10px;
+            font-weight: 900;
+          }
+          .editor-footer button[data-selected="true"] {
+            color: #7a4e8e;
+            background: #f1e7f7;
+          }
+          .editor-footer .footer-icon { font-size: 20px; line-height: 1.1; }
+          .publish-card {
+            display: grid;
+            gap: 12px;
+            padding: 18px;
+            border: 1px solid #eaddea;
+            border-radius: 18px;
+            background: rgba(255,255,255,.92);
+          }
+          .publish-card h2 { margin: 0; font-size: 20px; }
+          .publish-card p { margin: 0; color: #756582; font-size: 13px; line-height: 1.65; }
+          .publish-card button { width: 100%; min-height: 52px; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    if (!previewProxy) {
+      const scenePane = document.querySelector('.scene-pane');
+      if (!(scenePane instanceof HTMLElement)) throw new Error('Simple UI requires .scene-pane');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'mobile-project-preview';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ghost-button';
+      button.textContent = '▷ ためし読み';
+      button.addEventListener('click', () => previewButton.click());
+      wrapper.appendChild(button);
+      scenePane.appendChild(wrapper);
+      previewProxy = button;
+    }
+
+    if (!document.querySelector('.publish-pane')) {
+      const pane = document.createElement('aside');
+      pane.className = 'pane publish-pane';
+      const card = document.createElement('section');
+      card.className = 'publish-card';
+      const heading = document.createElement('h2');
+      heading.textContent = '公開';
+      const hint = document.createElement('p');
+      hint.textContent = '作品画面の「ためし読み」で内容を確認すると公開できます。';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'primary';
+      button.textContent = '公開する';
+      button.addEventListener('click', () => publishButton.click());
+      card.append(heading, hint, button);
+      pane.appendChild(card);
+      workspace.appendChild(pane);
+      publishProxy = button;
+      publishHint = hint;
+    }
+
+    if (!footerNav) {
+      const nav = document.createElement('nav');
+      nav.className = 'editor-footer';
+      nav.setAttribute('aria-label', 'ノベルエディタ');
+      const entries = [
+        ['scenes', '📁', '作品'],
+        ['editor', '✏️', 'シーン'],
+        ['settings', '⚙️', '設定'],
+        ['publish', '👑', '公開'],
+      ];
+      for (const [view, icon, label] of entries) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.editorView = view;
+        button.innerHTML = `<span class="footer-icon" aria-hidden="true">${icon}</span><span>${label}</span>`;
+        button.addEventListener('click', () => setView(view));
+        nav.appendChild(button);
+      }
+      app.appendChild(nav);
+      footerNav = nav;
+    }
+
+    syncActionProxies();
+    syncFooter(document.body.dataset.simpleView || 'scenes');
+  }
+
   function setView(view) {
-    if (!['scenes', 'editor', 'settings'].includes(view)) throw new TypeError(`Unsupported simple UI view: ${view}`);
+    if (!SIMPLE_VIEWS.includes(view)) throw new TypeError(`Unsupported simple UI view: ${view}`);
     document.body.dataset.simpleView = view;
     if (view === 'settings') settingsPane.scrollTop = 0;
+    const publishPane = document.querySelector('.publish-pane');
+    if (view === 'publish' && publishPane instanceof HTMLElement) publishPane.scrollTop = 0;
+    syncFooter(view);
+  }
+
+  function syncFooter(view) {
+    if (!(footerNav instanceof HTMLElement)) return;
+    for (const button of footerNav.querySelectorAll('button[data-editor-view]')) {
+      const selected = button.dataset.editorView === view;
+      button.dataset.selected = selected ? 'true' : 'false';
+      if (selected) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    }
+  }
+
+  function syncActionProxies() {
+    if (previewProxy instanceof HTMLButtonElement) previewProxy.disabled = previewButton.disabled;
+    if (publishProxy instanceof HTMLButtonElement) publishProxy.disabled = publishButton.disabled;
+    if (publishHint instanceof HTMLElement) {
+      publishHint.textContent = publishButton.disabled
+        ? '作品画面の「ためし読み」で内容を確認すると公開できます。'
+        : 'ためし読みで確認した内容を公開できます。';
+    }
+  }
+
+  function decorateStatus() {
+    const message = status.textContent.trim();
+    if (!message || SHORT_STATUS_MESSAGES.has(message)) return;
+    let short = null;
+    if (message.includes('読み込みました')) short = '読み込みました';
+    else if (message.includes('保存しました')) short = '保存しました';
+    else if (message.includes('未保存') || message.includes('変更')) short = '変更があります';
+    if (short === null) return;
+    status.title = message;
+    status.textContent = short;
   }
 
   function sceneId(button) {
@@ -264,10 +456,13 @@
 
   function decorate() {
     scheduled = false;
+    ensureMobileChrome();
     decorateScenes();
     decorateCharacters();
     decorateEvents();
     decorateDiagnostics();
+    decorateStatus();
+    syncActionProxies();
   }
 
   function scheduleDecorate() {
@@ -285,5 +480,8 @@
   observer.observe(sceneList, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
   observer.observe(eventEditor, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
   observer.observe(settingsPane, { childList: true, subtree: true });
+  observer.observe(status, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-kind'] });
+  observer.observe(previewButton, { attributes: true, attributeFilter: ['disabled'] });
+  observer.observe(publishButton, { attributes: true, attributeFilter: ['disabled'] });
   decorate();
 })();
