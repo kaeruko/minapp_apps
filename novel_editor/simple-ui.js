@@ -23,6 +23,8 @@
   const closeSettings = required('close-project-settings');
   const sceneBack = required('scene-back');
   const status = required('status');
+  const storyTitle = requiredInput('story-title');
+  const saveButton = requiredButton('save-button');
   const previewButton = requiredButton('preview-button');
   const publishButton = requiredButton('publish-button');
   const workspace = document.querySelector('.workspace');
@@ -39,10 +41,20 @@
   let previewProxy = null;
   let publishProxy = null;
   let publishHint = null;
+  let projectHero = null;
+  let projectHeroTitle = null;
+  let projectHeroStatus = null;
+  let projectHeroSave = null;
 
   function required(id) {
     const element = document.getElementById(id);
     if (!(element instanceof HTMLElement)) throw new Error(`Simple UI requires #${id}`);
+    return element;
+  }
+
+  function requiredInput(id) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLInputElement)) throw new Error(`Simple UI requires input #${id}`);
     return element;
   }
 
@@ -57,14 +69,84 @@
       const style = document.createElement('style');
       style.id = 'simple-mobile-chrome-style';
       style.textContent = `
-        .editor-footer, .publish-pane, .mobile-project-preview { display: none; }
+        .editor-footer, .publish-pane, .mobile-project-preview, .mobile-project-hero { display: none; }
         @media (max-width: 900px) {
           .app { grid-template-rows: auto minmax(0, 1fr) auto; }
+          header { display: none !important; }
           .settings-launch { display: none !important; }
-          header .header-title h1,
-          .scene-pane > .pane-title { display: none !important; }
-          header .actions #preview-button,
-          header .actions #publish-button { display: none !important; }
+          .scene-pane > .pane-title,
+          .scene-pane > .title-field { display: none !important; }
+          .mobile-project-hero {
+            display: grid;
+            gap: 9px;
+            position: relative;
+            overflow: hidden;
+            margin: 8px 14px 4px;
+            padding: 13px 14px 12px;
+            border: 1px solid rgba(232, 201, 213, .9);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,242,248,.84));
+            box-shadow: 0 7px 22px rgba(116, 91, 158, .08);
+            backdrop-filter: blur(14px);
+          }
+          .mobile-project-hero::after {
+            content: '♡  ✦';
+            position: absolute;
+            top: 9px;
+            right: 13px;
+            color: rgba(239, 111, 166, .35);
+            font-size: 14px;
+            letter-spacing: 3px;
+            pointer-events: none;
+          }
+          .mobile-project-hero-label {
+            color: #665069;
+            font-size: 11px;
+            font-weight: 900;
+          }
+          .mobile-project-hero-title {
+            width: 100%;
+            min-height: 44px;
+            padding: 8px 10px;
+            border: 1px solid #decbe0;
+            border-radius: 14px;
+            background: rgba(255,255,255,.9);
+            color: #4f3c4c;
+            font-size: 17px;
+            font-weight: 900;
+          }
+          .mobile-project-hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            min-height: 28px;
+          }
+          .mobile-project-hero-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #e2f6e9;
+            color: #2c6941;
+            font-size: 11px;
+            font-weight: 900;
+          }
+          .mobile-project-hero-status[data-kind="dirty"] { background: #fff0c9; color: #755108; }
+          .mobile-project-hero-status[data-kind="waiting"] { background: #e9efff; color: #3f5489; }
+          .mobile-project-hero-status[data-kind="error"] { background: #ffe5e8; color: #922a3d; }
+          .mobile-project-hero-save {
+            min-height: 30px;
+            padding: 5px 11px;
+            border: 0;
+            border-radius: 999px;
+            background: #76558f;
+            color: white;
+            font-size: 11px;
+            font-weight: 900;
+          }
+          .mobile-project-hero-save[hidden] { display: none; }
           .mobile-project-preview { display: block; margin: 14px 0 10px; }
           .mobile-project-preview > button { width: 100%; min-height: 52px; font-size: 15px; }
           .publish-pane { display: none; }
@@ -122,6 +204,46 @@
         }
       `;
       document.head.appendChild(style);
+    }
+
+    if (!projectHero) {
+      const hero = document.createElement('section');
+      hero.className = 'mobile-project-hero';
+      hero.setAttribute('aria-label', '作品情報');
+
+      const label = document.createElement('div');
+      label.className = 'mobile-project-hero-label';
+      label.textContent = '作品タイトル';
+
+      const titleInput = document.createElement('input');
+      titleInput.type = 'text';
+      titleInput.className = 'mobile-project-hero-title';
+      titleInput.maxLength = storyTitle.maxLength;
+      titleInput.setAttribute('aria-label', '作品タイトル');
+      titleInput.addEventListener('input', () => {
+        if (storyTitle.disabled) return;
+        storyTitle.value = titleInput.value;
+        storyTitle.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      const actions = document.createElement('div');
+      actions.className = 'mobile-project-hero-actions';
+      const state = document.createElement('span');
+      state.className = 'mobile-project-hero-status';
+      state.textContent = '読み込み中';
+      state.dataset.kind = 'waiting';
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'mobile-project-hero-save';
+      save.textContent = '保存する';
+      save.addEventListener('click', () => saveButton.click());
+      actions.append(state, save);
+      hero.append(label, titleInput, actions);
+      app.insertBefore(hero, workspace);
+      projectHero = hero;
+      projectHeroTitle = titleInput;
+      projectHeroStatus = state;
+      projectHeroSave = save;
     }
 
     if (!previewProxy) {
@@ -182,6 +304,7 @@
       footerNav = nav;
     }
 
+    syncProjectHero();
     syncActionProxies();
     syncFooter(document.body.dataset.simpleView || 'scenes');
   }
@@ -203,6 +326,35 @@
       if (selected) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     }
+  }
+
+  function syncProjectHero() {
+    if (!(projectHeroTitle instanceof HTMLInputElement) ||
+        !(projectHeroStatus instanceof HTMLElement) ||
+        !(projectHeroSave instanceof HTMLButtonElement)) return;
+
+    if (document.activeElement !== projectHeroTitle && projectHeroTitle.value !== storyTitle.value) {
+      projectHeroTitle.value = storyTitle.value;
+    }
+    projectHeroTitle.disabled = storyTitle.disabled;
+
+    const kind = status.dataset.kind || 'waiting';
+    let label = '保存済み';
+    let displayKind = 'ok';
+    if (kind === 'error') {
+      label = 'エラー';
+      displayKind = 'error';
+    } else if (kind === 'dirty') {
+      label = '未保存';
+      displayKind = 'dirty';
+    } else if (kind === 'waiting' || storyTitle.disabled) {
+      label = '読み込み中';
+      displayKind = 'waiting';
+    }
+    projectHeroStatus.textContent = label;
+    projectHeroStatus.dataset.kind = displayKind;
+    projectHeroSave.disabled = saveButton.disabled;
+    projectHeroSave.hidden = saveButton.disabled;
   }
 
   function syncActionProxies() {
@@ -464,6 +616,7 @@
     decorateEvents();
     decorateDiagnostics();
     decorateStatus();
+    syncProjectHero();
     syncActionProxies();
   }
 
@@ -476,6 +629,7 @@
   openSettings.addEventListener('click', () => setView('settings'));
   closeSettings.addEventListener('click', () => setView('scenes'));
   sceneBack.addEventListener('click', () => setView('scenes'));
+  storyTitle.addEventListener('input', syncProjectHero);
   document.body.dataset.simpleView = 'scenes';
 
   const observer = new MutationObserver(scheduleDecorate);
@@ -483,6 +637,8 @@
   observer.observe(eventEditor, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
   observer.observe(settingsPane, { childList: true, subtree: true });
   observer.observe(status, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-kind'] });
+  observer.observe(storyTitle, { attributes: true, attributeFilter: ['disabled'] });
+  observer.observe(saveButton, { attributes: true, attributeFilter: ['disabled'] });
   observer.observe(previewButton, { attributes: true, attributeFilter: ['disabled'] });
   observer.observe(publishButton, { attributes: true, attributeFilter: ['disabled'] });
   decorate();
