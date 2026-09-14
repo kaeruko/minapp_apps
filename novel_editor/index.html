@@ -7,19 +7,31 @@
   <style>
     :root {
       font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
-      color: #382b4a;
-      background: #f7f1fb;
+      color: #49384f;
+      background: #fff9fc;
+      --ink: #57424f;
+      --muted: #8c7893;
+      --pink: #f8dbe8;
+      --pink-strong: #ef6fa6;
+      --lavender: #76558f;
+      --lavender-soft: #eee5f7;
+      --border: #eaddea;
+      --card: rgba(255,255,255,.9);
     }
 
     * { box-sizing: border-box; }
     html, body { min-height: 100%; margin: 0; }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+      outline: 3px solid #c6a9dd;
+      outline-offset: 2px;
+    }
 
     body {
       min-height: 100vh;
       min-height: 100dvh;
-      background: linear-gradient(150deg, #fff7fb, #f0e8fb 55%, #e7f5ff);
+      background: linear-gradient(180deg, #fff9fc 0%, #fbf4ff 60%, #f4effb 100%);
     }
 
     .app {
@@ -30,315 +42,385 @@
 
     header {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 14px 18px;
-      border-bottom: 1px solid #d8cde4;
-      background: #ffffffde;
-      backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
       position: sticky;
       top: 0;
-      z-index: 5;
+      z-index: 20;
     }
 
-    h1 { margin: 0; font-size: 20px; }
-    h2 { margin: 0; font-size: 17px; }
-    h3 { margin: 0; font-size: 14px; }
-
-    .header-meta,
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
-
+    .header-title { min-width: 0; }
+    .header-title h1 { margin: 0; font-size: 18px; color: var(--ink); }
+    .header-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
     .pill {
-      padding: 5px 9px;
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 4px 9px;
       border-radius: 999px;
-      background: #eee5f7;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    #status[data-kind="error"] { background: #ffe1e1; color: #8a2222; }
-    #status[data-kind="ok"] { background: #def6e7; color: #22643b; }
-    #status[data-kind="dirty"] { background: #fff0c7; color: #765000; }
-    #status[data-kind="waiting"] { background: #e7efff; color: #2f4f8c; }
-
-    .primary,
-    .secondary {
-      min-height: 40px;
-      border: 0;
-      border-radius: 12px;
-      padding: 8px 14px;
+      background: #f2e9f7;
+      color: #685775;
+      font-size: 11px;
       font-weight: 800;
     }
+    #status[data-kind="error"] { background: #ffe5e8; color: #922a3d; }
+    #status[data-kind="ok"] { background: #e2f6e9; color: #2c6941; }
+    #status[data-kind="dirty"] { background: #fff0c9; color: #755108; }
+    #status[data-kind="waiting"] { background: #e9efff; color: #3f5489; }
+    .technical-meta { display: none; }
 
-    .primary { background: #76558f; color: white; }
-    .secondary { background: #e7dced; color: #4a355d; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
+    .actions { display: flex; align-items: center; gap: 7px; }
+    .primary, .secondary, .ghost-button {
+      min-height: 42px;
+      border-radius: 13px;
+      padding: 9px 13px;
+      font-weight: 900;
+      border: 0;
+    }
+    .primary { background: var(--pink-strong); color: white; }
+    .secondary { background: var(--lavender-soft); color: #563d69; }
+    .ghost-button { background: white; color: var(--lavender); border: 1px solid var(--border); }
+    button:disabled { opacity: .42; cursor: not-allowed; }
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(180px, 240px) minmax(360px, 1fr) minmax(220px, 300px);
+      grid-template-columns: minmax(250px, 320px) minmax(380px, 1fr) minmax(280px, 340px);
       min-height: 0;
     }
-
     .pane {
       min-width: 0;
-      padding: 16px;
+      padding: 18px;
       overflow: auto;
-      border-right: 1px solid #ded4e8;
+      border-right: 1px solid var(--border);
     }
-
     .pane:last-child { border-right: 0; }
-    .pane-title { margin-bottom: 12px; }
+    .pane-title { margin: 0 0 14px; font-size: 19px; color: var(--ink); }
+    .pane-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .pane-heading h2 { margin: 0; font-size: 19px; }
 
     label {
       display: grid;
       gap: 6px;
       margin-bottom: 12px;
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 900;
+      color: var(--ink);
     }
-
-    input,
-    select,
-    textarea {
+    input, select, textarea {
       width: 100%;
-      border: 1px solid #cfc1db;
-      border-radius: 10px;
+      min-height: 42px;
+      border: 1px solid #d9cadd;
+      border-radius: 12px;
       background: white;
       color: inherit;
-      padding: 9px 10px;
+      padding: 10px 11px;
     }
+    textarea { resize: vertical; line-height: 1.65; min-height: 110px; }
 
-    textarea { resize: vertical; line-height: 1.55; }
+    .title-field input { font-size: 16px; font-weight: 900; }
+    .settings-launch { width: 100%; margin: 4px 0 18px; }
 
-    #scene-list {
-      display: grid;
-      gap: 7px;
+    #scene-list { display: grid; gap: 10px; }
+    .scene-row {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px !important;
+      align-items: center !important;
+      margin: 0 !important;
     }
-
     .scene-button {
       width: 100%;
-      border: 1px solid #d7c9e1;
-      border-radius: 10px;
-      padding: 9px 10px;
-      background: white;
-      color: inherit;
+      min-height: 58px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 12px 13px;
+      background: var(--card);
+      color: var(--ink);
       text-align: left;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: 0 5px 18px rgba(118,85,143,.05);
     }
-
     .scene-button[data-selected="true"] {
-      border-color: #76558f;
-      background: #f0e5f7;
+      border-color: #b995cf;
+      background: #f4ebfa;
     }
+    .scene-row > .danger { opacity: .75; }
+    .simple-scene-add { margin-top: 2px !important; }
+    .simple-scene-add .technical-control { display: none !important; }
+    .simple-scene-add > button { width: 100%; min-height: 46px; }
 
-    .scene-heading,
-    .event-heading,
-    .readonly-row,
-    .choice-row {
+    .scene-heading, .event-heading, .readonly-row, .choice-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
-
-    .scene-heading { margin-bottom: 12px; }
-    .scene-heading span { font-size: 11px; color: #756582; }
+    .scene-heading { margin-bottom: 14px; }
+    .scene-heading h2 { margin: 0; font-size: 19px; }
+    .technical-control, .technical-id { display: none !important; }
 
     .event-card {
       display: grid;
-      gap: 9px;
+      gap: 10px;
       margin-bottom: 12px;
-      padding: 12px;
-      border: 1px solid #ddd1e7;
-      border-radius: 14px;
-      background: #fffdfd;
-      box-shadow: 0 5px 16px #76558f0c;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: 0 6px 20px rgba(118,85,143,.055);
     }
-
-    .event-heading code,
-    .readonly-row code,
-    .choice-row code,
-    #asset-list code {
-      overflow-wrap: anywhere;
-      color: #685775;
-      font-size: 11px;
-    }
-
-    .readonly-row {
-      justify-content: flex-start;
-      font-size: 12px;
-    }
-
-    .readonly-row span { min-width: 70px; color: #756582; }
+    .event-card[data-event-type="dialogue"] { border-left: 4px solid #a889cf; }
+    .event-card[data-event-type="choice"] { border-left: 4px solid #e983ad; }
+    .event-card[data-event-type="background"] { border-left: 4px solid #83c9bd; }
+    .event-card[data-event-type="character"] { border-left: 4px solid #9eb4e3; }
+    .event-card[data-event-type="bgm"], .event-card[data-event-type="se"] { border-left: 4px solid #c59bd8; }
+    .event-card[data-event-type="goto"], .event-card[data-event-type="end"] { border-left: 4px solid #efb779; }
+    .event-heading strong { font-size: 14px; }
     .choice-row { align-items: flex-start; }
     .choice-row input { flex: 1; }
-    .choice-row code { width: 42%; padding-top: 10px; }
 
-    .side-card {
-      margin-bottom: 14px;
-      padding: 12px;
-      border-radius: 14px;
-      background: #ffffffc9;
-      border: 1px solid #ded4e8;
-    }
-
-    .side-card p {
-      margin: 8px 0 0;
-      font-size: 12px;
-      line-height: 1.55;
-    }
-
-    #asset-list { display: grid; gap: 8px; }
     .asset-form { display: grid; gap: 8px; margin: 10px 0 12px; }
     .asset-form label { margin: 0; }
     .asset-row {
       display: grid;
-      gap: 7px;
-      padding: 9px;
-      border: 1px solid #ddd1e7;
-      border-radius: 10px;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
       background: white;
     }
     .asset-row > div:first-child { display: grid; gap: 4px; min-width: 0; }
-    .asset-row.orphan { border-style: dashed; background: #fff9ed; }
+    .asset-row.orphan { border-style: dashed; background: #fffaf0; }
     .asset-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     .mini-button {
       border: 0;
       border-radius: 9px;
-      padding: 6px 9px;
-      background: #eee5f7;
-      color: #4a355d;
+      padding: 7px 9px;
+      background: var(--lavender-soft);
+      color: #563d69;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
     }
-    .mini-button.danger { background: #ffe3e3; color: #8a2222; }
-    #asset-preview { display: grid; gap: 7px; margin-top: 10px; }
-    #asset-preview img {
-      width: 100%;
-      max-height: 220px;
-      object-fit: contain;
+    .mini-button.danger { background: #ffe6e9; color: #942d42; }
+
+    .event-menu { position: relative; }
+    .event-menu > summary {
+      list-style: none;
+      cursor: pointer;
+      min-width: 36px;
+      min-height: 36px;
+      display: grid;
+      place-items: center;
       border-radius: 10px;
-      background: #f3eef7;
+      background: #f4edf8;
+      font-size: 20px;
+      font-weight: 900;
     }
+    .event-menu > summary::-webkit-details-marker { display: none; }
+    .event-menu[open] > .asset-actions {
+      position: absolute;
+      right: 0;
+      top: 42px;
+      z-index: 12;
+      width: 160px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 12px 30px rgba(70,45,85,.16);
+      display: grid;
+    }
+    .event-menu[open] > .asset-actions button { width: 100%; }
+
+    .event-add-card {
+      background: transparent;
+      border-style: dashed;
+      box-shadow: none;
+      padding: 0;
+      border: 0;
+    }
+    .simple-add-controls { display: grid; gap: 8px; }
+    .simple-add-button { width: 100%; min-height: 48px; text-align: left; padding-inline: 16px; }
+
+    .side-card, .settings-card {
+      margin-bottom: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+    .side-card h3, .settings-card h3 { margin: 0; font-size: 15px; }
+    .side-card p, .settings-card p { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: #756582; }
+    #asset-list { display: grid; gap: 8px; }
+    #asset-list code { overflow-wrap: anywhere; color: #786683; font-size: 10px; }
+    #asset-preview { display: grid; gap: 7px; margin-top: 10px; }
+    #asset-preview img { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; background: #f3eef7; }
     #asset-preview audio { width: 100%; }
-    .inline-check {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-      font-size: 12px;
-    }
+    .inline-check { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; }
     .inline-check input { width: auto; }
     #validation[data-kind="ok"] { color: #24663c; }
     #validation[data-kind="error"] { color: #9a2d2d; }
+    details.advanced-details { margin-top: 12px; }
+    details.advanced-details > summary { cursor: pointer; font-weight: 900; color: #6a5574; }
 
-    .preview-note {
-      padding: 12px;
-      border-radius: 12px;
-      background: #fff3d6;
-      color: #6f540f;
-      font-size: 12px;
-      line-height: 1.55;
+    .mobile-only { display: none; }
+
+    .effects-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(55,43,58,.42);
     }
+    .effects-overlay[hidden] { display: none; }
+    .effects-sheet {
+      width: min(560px, 100%);
+      max-height: min(80vh, 720px);
+      overflow: auto;
+      padding: 18px;
+      border-radius: 24px 24px 18px 18px;
+      background: #fffdfd;
+      box-shadow: 0 20px 60px rgba(49,35,57,.24);
+    }
+    .effects-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .effects-heading h2 { margin: 0; font-size: 20px; }
+    .sheet-close { border: 0; background: #f4edf8; border-radius: 999px; width: 38px; height: 38px; font-size: 24px; }
+    .effects-list { display: grid; gap: 9px; }
+    .effects-option {
+      display: grid;
+      grid-template-columns: 44px minmax(0,1fr) auto;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: #fff9fd;
+      color: var(--ink);
+      text-align: left;
+    }
+    .effects-option strong { display: block; font-size: 14px; }
+    .effects-option small { display: block; margin-top: 3px; color: var(--muted); line-height: 1.4; }
+    .effects-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: #eee5f7; font-size: 21px; }
+    .sheet-cancel { width: 100%; margin-top: 12px; }
 
     @media (max-width: 900px) {
-      .workspace { grid-template-columns: 180px minmax(0, 1fr); }
-      .pane:last-child {
-        grid-column: 1 / -1;
-        border-top: 1px solid #ded4e8;
-      }
+      header { padding: 10px 12px; }
+      .header-title h1 { font-size: 16px; }
+      .actions { gap: 5px; }
+      .actions button { min-height: 38px; padding: 7px 9px; font-size: 12px; }
+      .workspace { display: block; }
+      .pane { border-right: 0; min-height: calc(100dvh - 86px); }
+      .mobile-only { display: inline-flex; }
+      body[data-simple-view="scenes"] .editor-pane,
+      body[data-simple-view="scenes"] .settings-pane { display: none; }
+      body[data-simple-view="editor"] .scene-pane,
+      body[data-simple-view="editor"] .settings-pane { display: none; }
+      body[data-simple-view="settings"] .scene-pane,
+      body[data-simple-view="settings"] .editor-pane { display: none; }
+      .scene-pane, .editor-pane, .settings-pane { padding: 14px; }
+      .scene-row > .danger { display: none; }
     }
 
-    @media (max-width: 640px) {
-      header { position: static; }
-      .workspace { display: block; }
-      .pane { border-right: 0; border-bottom: 1px solid #ded4e8; }
-      .pane:last-child { border-bottom: 0; }
+    @media (max-width: 520px) {
+      #save-button { font-size: 0; width: 40px; padding: 0; }
+      #save-button::before { content: '✓'; font-size: 17px; }
+      .header-meta { max-width: 170px; }
+      #status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
       .choice-row { display: grid; }
-      .choice-row code { width: auto; padding-top: 0; }
+      .effects-overlay { padding: 0; }
+      .effects-sheet { border-radius: 24px 24px 0 0; }
     }
   </style>
 </head>
-<body>
+<body data-simple-view="scenes">
   <main class="app">
     <header>
-      <div>
-        <h1>📖 ノベルゲームメーカー</h1>
+      <div class="header-title">
+        <h1>📖 ノベルゲームを作る</h1>
         <div class="header-meta">
-          <span id="revision" class="pill">Draft -</span>
-          <span id="content-revision" class="pill">Save compatibility -</span>
-          <span id="status" class="pill" data-kind="waiting">ホスト接続待ち</span>
+          <span id="revision" class="pill technical-meta">Draft -</span>
+          <span id="content-revision" class="pill technical-meta">Save compatibility -</span>
+          <span id="status" class="pill" data-kind="waiting">作品を読み込んでいます</span>
         </div>
       </div>
       <div class="actions">
         <button id="save-button" class="secondary" type="button" disabled>保存</button>
-        <button id="preview-button" class="secondary" type="button" disabled>Preview</button>
-        <button id="publish-button" class="primary" type="button" disabled>公開</button>
+        <button id="preview-button" class="ghost-button" type="button" disabled>▷ ためし読み</button>
+        <button id="publish-button" class="primary" type="button" disabled>公開する</button>
       </div>
     </header>
 
     <div class="workspace">
-      <aside class="pane">
-        <h2 class="pane-title">シーン</h2>
-        <label>
+      <aside class="pane scene-pane">
+        <h2 class="pane-title">作品編集</h2>
+        <label class="title-field">
           作品タイトル
           <input id="story-title" type="text" maxlength="100" disabled>
         </label>
-        <label>
-          開始シーン
-          <select id="start-scene" disabled></select>
-        </label>
+        <h2 class="pane-title">シーン一覧</h2>
         <div id="scene-list"></div>
+        <button id="open-project-settings" class="ghost-button settings-launch" type="button">⚙ 作品設定・素材</button>
       </aside>
 
-      <section class="pane">
+      <section class="pane editor-pane">
+        <div class="pane-heading mobile-only">
+          <button id="scene-back" class="ghost-button" type="button">← シーン一覧</button>
+        </div>
         <div id="event-editor">
           <p>作品を読み込んでいます。</p>
         </div>
       </section>
 
-      <aside class="pane">
-        <section class="side-card">
-          <h3>検証</h3>
-          <p id="validation">未読込</p>
+      <aside id="settings-pane" class="pane settings-pane">
+        <div class="pane-heading">
+          <h2>作品設定</h2>
+          <button id="close-project-settings" class="ghost-button mobile-only" type="button">閉じる</button>
+        </div>
+
+        <section class="settings-card">
+          <h3>最初のシーン</h3>
+          <p>通常はシーン1のままで大丈夫です。</p>
+          <label>
+            最初に表示するシーン
+            <select id="start-scene" disabled></select>
+          </label>
         </section>
+
+        <div id="character-settings-slot"></div>
+
         <section class="side-card">
-          <h3>素材</h3>
+          <h3>画像・音楽</h3>
+          <p>背景、立ち絵、BGM、効果音に使う素材を追加できます。</p>
           <div class="asset-form">
             <label>
-              素材ID
-              <input id="asset-id" type="text" maxlength="64" placeholder="classroom / akari_smile / bgm01" disabled>
+              素材の名前
+              <input id="asset-id" type="text" maxlength="64" placeholder="例: classroom / akari_smile / bgm01" disabled>
             </label>
             <label>
-              画像・BGM・SEファイル
+              画像・音楽ファイル
               <input id="asset-file" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.mp3,.m4a,.ogg,.wav,image/png,image/jpeg,image/gif,image/webp,audio/mpeg,audio/mp4,audio/ogg,audio/wav" disabled>
             </label>
             <button id="asset-save-button" class="secondary" type="button" disabled>追加 / 差し替え</button>
-            <p>同じ素材IDを指定すると差し替えます。素材変更はDraftへ保存され、revision競合時は自動上書きしません。</p>
           </div>
-          <div id="asset-list"><p>未読込</p></div>
+          <div id="asset-list"><p>素材はまだありません。</p></div>
           <div id="asset-preview"></div>
         </section>
-        <section class="side-card">
-          <h3>Preview</h3>
-          <p class="preview-note">
-            PreviewはEditor内の別実装ではなく、Hostが選んだ本番と同じNovel Playerで現在のDraftを再生します。Previewに成功した同じDraftだけを公開できます。
-          </p>
-        </section>
-        <section class="side-card">
-          <h3>v1 Editorの安全範囲</h3>
-          <p>
-            stable IDは維持します。タイトル、開始シーン、セリフ、選択肢ラベル、ENDラベルに加え、背景/BGM/SEの素材選択と画像・音声素材の追加・差し替え・削除ができます。
-          </p>
-        </section>
+
+        <details class="advanced-details side-card">
+          <summary>詳細・問題の確認</summary>
+          <p id="validation">未読込</p>
+          <p>エラーが出た場合は、ここに元の診断情報を表示します。自動で別形式へ変換したり、別経路へ切り替えたりはしません。</p>
+        </details>
       </aside>
     </div>
   </main>
@@ -348,5 +430,6 @@
   <script src="asset-tools.js"></script>
   <script src="editor-resilience.js"></script>
   <script src="editor.js"></script>
+  <script src="simple-ui.js"></script>
 </body>
 </html>
