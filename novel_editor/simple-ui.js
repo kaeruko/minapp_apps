@@ -61,6 +61,8 @@
         @media (max-width: 900px) {
           .app { grid-template-rows: auto minmax(0, 1fr) auto; }
           .settings-launch { display: none !important; }
+          header .header-title h1,
+          .scene-pane > .pane-title { display: none !important; }
           header .actions #preview-button,
           header .actions #publish-button { display: none !important; }
           .mobile-project-preview { display: block; margin: 14px 0 10px; }
