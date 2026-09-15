@@ -329,6 +329,22 @@
       body[data-simple-view="settings"] .editor-pane { display: none; }
       .scene-pane, .editor-pane, .settings-pane { padding: 14px; }
       .scene-row > .danger { display: none; }
+
+      .editor-footer .footer-icon {
+        display: block;
+        width: 32px;
+        height: 32px;
+        font-size: 0 !important;
+        line-height: 0 !important;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+      }
+      .editor-footer button[data-editor-view="scenes"] .footer-icon { background-image: url("assets/footer-project.png"); }
+      .editor-footer button[data-editor-view="editor"] .footer-icon { background-image: url("assets/footer-scene.png"); }
+      .editor-footer button[data-editor-view="settings"] .footer-icon { background-image: url("assets/footer-settings.png"); }
+      .editor-footer button[data-editor-view="publish"] .footer-icon { background-image: url("assets/footer-publish.png"); }
+      .editor-footer button[data-selected="true"] .footer-icon { transform: scale(1.06); }
     }
 
     @media (max-width: 520px) {
