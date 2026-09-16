@@ -7,6 +7,13 @@
   });
   const FIELD_LABELS = Object.freeze({ speaker: '話す人', action: '動き', slot: '位置', character: 'キャラクター', expression: '表情', goto: '移動先' });
   const OPTION_LABELS = Object.freeze({ show: '表示する', hide: '隠す', left: '左', center: '中央', right: '右', play: '再生する', stop: '停止する' });
+  const SAMPLE_SCENE_LABELS = Object.freeze({
+    start: '放課後の教室',
+    rooftop: '屋上',
+    together: 'ふたりの秘密',
+    photo: '写真を撮る',
+    leave: '帰る',
+  });
   const SIMPLE_VIEWS = Object.freeze(['scenes', 'editor', 'settings', 'publish']);
   const SHORT_STATUS_MESSAGES = new Set([
     '作品を読み込んでいます',
@@ -387,6 +394,11 @@
     return value;
   }
 
+  function sceneDisplay(rawId, index) {
+    const label = SAMPLE_SCENE_LABELS[rawId];
+    return label ? `シーン ${index + 1}　${label}` : `シーン ${index + 1}`;
+  }
+
   function nextSceneId() {
     const used = new Set(Array.from(sceneList.querySelectorAll('.scene-button')).map(sceneId));
     for (let index = 1; index <= 999999; index += 1) {
@@ -400,7 +412,7 @@
     const buttons = Array.from(sceneList.querySelectorAll('.scene-button'));
     buttons.forEach((button, index) => {
       const rawId = sceneId(button);
-      const display = `シーン ${index + 1}`;
+      const display = sceneDisplay(rawId, index);
       if (button.textContent !== display) button.textContent = display;
       if (button.title !== rawId) button.title = rawId;
       button.parentElement?.classList.add('scene-row');
@@ -595,7 +607,9 @@
       title.dataset.sceneId = rawId;
       const buttons = Array.from(sceneList.querySelectorAll('.scene-button'));
       const index = buttons.findIndex((button) => sceneId(button) === rawId);
-      const display = index >= 0 ? `シーン ${index + 1}を編集` : 'シーンを編集';
+      const display = index >= 0
+        ? `${sceneDisplay(rawId, index)}を編集`
+        : 'シーンを編集';
       if (title.textContent !== display) title.textContent = display;
     }
     heading?.querySelector('span')?.classList.add('technical-control');
