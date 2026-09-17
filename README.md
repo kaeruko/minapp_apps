@@ -6,6 +6,7 @@
 
 ## Layout
 
+- `memo_pad/` - 「マイメモ帳」シンプルな自動保存メモ
 - `shiba_donguri/`
 - `shiba_goshujin/`
 - `shopping_town/`
