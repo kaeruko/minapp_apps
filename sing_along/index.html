@@ -190,6 +190,8 @@
     let recordedBlob = null;
     let recordedUrl = null;
     let recordedAudio = null;
+    let recordedMimeType = null;
+    let recordedPlaybackSupport = '';
     let timerId = null;
     let startedAt = 0;
 
@@ -204,6 +206,47 @@
     function setStatus(message) {
       statusBox.className = 'status';
       statusBox.textContent = message;
+    }
+
+    function requireRecordedMimeType(chunks) {
+      if (!recorder) throw new Error('録音処理が初期化されていません。');
+      const recorderType = typeof recorder.mimeType === 'string' ? recorder.mimeType.trim() : '';
+      const chunkTypes = [...new Set(
+        chunks
+          .map((chunk) => (typeof chunk.type === 'string' ? chunk.type.trim() : ''))
+          .filter((type) => type.length > 0),
+      )];
+      if (chunkTypes.length > 1) {
+        throw new Error(`録音データの形式が途中で変わりました: ${chunkTypes.join(', ')}`);
+      }
+      const chunkType = chunkTypes[0] || '';
+      if (recorderType && chunkType && recorderType.toLowerCase() !== chunkType.toLowerCase()) {
+        throw new Error(`MediaRecorderと録音データの形式が一致しません: recorder=${recorderType}, chunk=${chunkType}`);
+      }
+      const mimeType = recorderType || chunkType;
+      if (!mimeType) {
+        throw new Error('録音データのMIME typeを特定できませんでした。');
+      }
+      return mimeType;
+    }
+
+    function playbackDiagnostics() {
+      if (!recordedAudio) return `mime=${recordedMimeType || 'unknown'}, audio=missing`;
+      const mediaError = recordedAudio.error
+        ? `${recordedAudio.error.code}:${recordedAudio.error.message || 'no-message'}`
+        : 'none';
+      return [
+        `mime=${recordedMimeType || 'unknown'}`,
+        `canPlay=${recordedPlaybackSupport || 'unknown'}`,
+        `readyState=${recordedAudio.readyState}`,
+        `networkState=${recordedAudio.networkState}`,
+        `mediaError=${mediaError}`,
+      ].join(', ');
+    }
+
+    function playbackFailure(stage, error) {
+      const original = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      return new Error(`${stage}に失敗しました。${playbackDiagnostics()} / 元のエラー: ${original}`);
     }
 
     function requireCapabilities() {
@@ -334,7 +377,9 @@
       stopBgm();
       if (recordedAudio) {
         recordedAudio.pause();
-        recordedAudio.currentTime = 0;
+        if (recordedAudio.readyState >= HTMLMediaElement.HAVE_METADATA && recordedAudio.currentTime !== 0) {
+          recordedAudio.currentTime = 0;
+        }
       }
       if (recorder && recorder.state === 'recording') recorder.stop();
       stopStream();
@@ -362,17 +407,27 @@
           if (event.data && event.data.size > 0) chunks.push(event.data);
         });
         recorder.addEventListener('stop', () => {
-          if (chunks.length === 0) {
-            fail(new Error('録音データが空でした。'));
-            return;
+          try {
+            if (chunks.length === 0) throw new Error('録音データが空でした。');
+            recordedMimeType = requireRecordedMimeType(chunks);
+            recordedBlob = new Blob(chunks, { type: recordedMimeType });
+            if (!recordedBlob.type) throw new Error('録音BlobのMIME typeが空です。');
+            if (recordedBlob.type.toLowerCase() !== recordedMimeType.toLowerCase()) {
+              throw new Error(`録音Blobの形式が変化しました: expected=${recordedMimeType}, actual=${recordedBlob.type}`);
+            }
+            if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+            recordedUrl = URL.createObjectURL(recordedBlob);
+            recordedAudio = new Audio();
+            recordedAudio.preload = 'metadata';
+            recordedAudio.src = recordedUrl;
+            recordedPlaybackSupport = recordedAudio.canPlayType(recordedMimeType);
+            recordedAudio.load();
+            stopStream();
+            setMode('idle');
+            setStatus(`録音できたよ！形式: ${recordedMimeType} / 再生対応: ${recordedPlaybackSupport || '未判定'}。「BGM＋うた」で聞いてみよう。`);
+          } catch (error) {
+            fail(error);
           }
-          recordedBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-          if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-          recordedUrl = URL.createObjectURL(recordedBlob);
-          recordedAudio = new Audio(recordedUrl);
-          stopStream();
-          setMode('idle');
-          setStatus('録音できたよ！「BGM＋うた」で聞いてみよう。');
         }, { once: true });
         recorder.start();
         setMode('recording');
@@ -385,15 +440,25 @@
 
     async function playRecording() {
       try {
-        if (!recordedAudio || !recordedBlob) throw new Error('録音データがありません。');
-        recordedAudio.currentTime = 0;
+        if (!recordedAudio || !recordedBlob || !recordedMimeType) {
+          throw new Error('録音データがありません。');
+        }
+        if (recordedAudio.readyState >= HTMLMediaElement.HAVE_METADATA && recordedAudio.currentTime !== 0) {
+          recordedAudio.currentTime = 0;
+        }
+        recordedPlaybackSupport = recordedAudio.canPlayType(recordedMimeType);
         setMode('playback');
         timer.textContent = '00:00';
-        await startBgm();
-        await recordedAudio.play();
+        const voicePlayback = recordedAudio.play().catch((error) => {
+          throw playbackFailure('録音音声の再生', error);
+        });
+        const bgmPlayback = startBgm().catch((error) => {
+          throw playbackFailure('BGMの再生', error);
+        });
+        await Promise.all([voicePlayback, bgmPlayback]);
         beginTimer(stopByUser);
         recordedAudio.addEventListener('ended', stopByUser, { once: true });
-        setStatus('BGMといっしょに再生中です。');
+        setStatus(`BGMといっしょに再生中です。形式: ${recordedMimeType}`);
       } catch (error) { fail(error); }
     }
 
@@ -403,7 +468,9 @@
       stopBgm();
       if (recordedAudio) {
         recordedAudio.pause();
-        recordedAudio.currentTime = 0;
+        if (recordedAudio.readyState >= HTMLMediaElement.HAVE_METADATA && recordedAudio.currentTime !== 0) {
+          recordedAudio.currentTime = 0;
+        }
       }
       if (wasRecording) {
         recorder.stop();
@@ -422,6 +489,8 @@
       recordedBlob = null;
       recordedUrl = null;
       recordedAudio = null;
+      recordedMimeType = null;
+      recordedPlaybackSupport = '';
       recorder = null;
       timer.textContent = '00:00';
       setMode('idle');
