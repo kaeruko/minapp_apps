@@ -50,6 +50,8 @@
   let busy = false;
   let storageValid = false;
   let assetPreviewUrl = null;
+  const inlineImagePreviewCache = new Map();
+  const inlineImagePreviewPending = new Map();
   let characterPanel = null;
   let characterList = null;
 
@@ -259,6 +261,160 @@
       .map(([assetId]) => assetId);
   }
 
+  function inlineImagePreviewKey(descriptor, storedAsset) {
+    return `${descriptor.src}\n${storedAsset.sha256}`;
+  }
+
+  function pruneInlineImagePreviewCache() {
+    const validKeys = new Set();
+    if (project && workingDocument) {
+      for (const descriptor of Object.values(workingDocument.assets)) {
+        if (descriptor.kind !== 'image') continue;
+        const stored = assetTools.serverAssetByPath(project.assets, descriptor.src);
+        if (stored) validKeys.add(inlineImagePreviewKey(descriptor, stored));
+      }
+    }
+
+    for (const [key, url] of inlineImagePreviewCache.entries()) {
+      if (validKeys.has(key)) continue;
+      URL.revokeObjectURL(url);
+      inlineImagePreviewCache.delete(key);
+    }
+  }
+
+  async function inlineImagePreviewUrl(assetId) {
+    if (!project || !workingDocument) {
+      throw Object.assign(new Error('Authoring Project is not loaded'), {
+        code: 'authoring_project_not_loaded',
+      });
+    }
+    const descriptor = workingDocument.assets[assetId];
+    if (!descriptor) {
+      throw Object.assign(new Error(`素材 ${assetId} がありません`), {
+        code: 'asset_not_found',
+      });
+    }
+    if (descriptor.kind !== 'image') {
+      throw Object.assign(new Error(`素材 ${assetId} は画像ではありません`), {
+        code: 'asset_kind_mismatch',
+      });
+    }
+    const stored = assetTools.serverAssetByPath(project.assets, descriptor.src);
+    if (!stored) {
+      throw Object.assign(new Error(`画像素材 ${assetId} はまだ保存されていません`), {
+        code: 'asset_not_stored',
+      });
+    }
+
+    const key = inlineImagePreviewKey(descriptor, stored);
+    const cached = inlineImagePreviewCache.get(key);
+    if (cached) return cached;
+
+    const pending = inlineImagePreviewPending.get(key);
+    if (pending) return pending;
+
+    const request = (async () => {
+      const result = await requiredAuthoringApi().getAsset(descriptor.src);
+      if (
+        !result ||
+        !(result.bytes instanceof Uint8Array) ||
+        result.contentType !== descriptor.mime ||
+        result.bytes.length !== stored.bytes
+      ) {
+        throw Object.assign(new Error(`画像素材 ${assetId} の取得結果が保存情報と一致しません`), {
+          code: 'asset_response_mismatch',
+        });
+      }
+
+      const currentDescriptor = workingDocument.assets[assetId];
+      const currentStored = currentDescriptor
+        ? assetTools.serverAssetByPath(project.assets, currentDescriptor.src)
+        : null;
+      if (
+        !currentDescriptor ||
+        currentDescriptor.kind !== 'image' ||
+        currentDescriptor.src !== descriptor.src ||
+        !currentStored ||
+        currentStored.sha256 !== stored.sha256
+      ) {
+        throw Object.assign(new Error(`画像素材 ${assetId} が読み込み中に更新されました`), {
+          code: 'asset_preview_stale',
+        });
+      }
+
+      const url = URL.createObjectURL(new Blob([result.bytes], { type: result.contentType }));
+      inlineImagePreviewCache.set(key, url);
+      return url;
+    })();
+
+    inlineImagePreviewPending.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (inlineImagePreviewPending.get(key) === request) {
+        inlineImagePreviewPending.delete(key);
+      }
+    }
+  }
+
+  async function updateInlineImagePreview(preview, assetId, fallbackAlt) {
+    if (!(preview instanceof HTMLElement)) {
+      throw new TypeError('Inline image preview container is required');
+    }
+    const image = preview.querySelector('img');
+    const state = preview.querySelector('.inline-image-preview-status');
+    if (!(image instanceof HTMLImageElement) || !(state instanceof HTMLElement)) {
+      throw new Error('Inline image preview is incomplete');
+    }
+
+    preview.dataset.assetId = assetId;
+    preview.dataset.state = 'loading';
+    state.textContent = '画像を読み込み中…';
+    image.removeAttribute('src');
+    image.alt = '';
+
+    try {
+      const url = await inlineImagePreviewUrl(assetId);
+      if (preview.dataset.assetId !== assetId) return;
+      const descriptor = workingDocument.assets[assetId];
+      if (!descriptor || descriptor.kind !== 'image') {
+        throw Object.assign(new Error(`画像素材 ${assetId} がありません`), {
+          code: 'asset_not_found',
+        });
+      }
+      image.src = url;
+      image.alt = descriptor.alt || fallbackAlt;
+      preview.dataset.state = 'ready';
+      state.textContent = '';
+    } catch (error) {
+      if (preview.dataset.assetId === assetId) {
+        preview.dataset.state = 'error';
+        state.textContent = '画像を読み込めません';
+      }
+      throw error;
+    }
+  }
+
+  function makeInlineImagePreview(assetId, variant, fallbackAlt) {
+    const preview = document.createElement('div');
+    preview.className = 'inline-image-preview';
+    preview.dataset.variant = variant;
+
+    const frame = document.createElement('div');
+    frame.className = 'inline-image-preview-frame';
+    const image = document.createElement('img');
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    frame.appendChild(image);
+
+    const state = document.createElement('small');
+    state.className = 'inline-image-preview-status';
+    preview.append(frame, state);
+
+    void updateInlineImagePreview(preview, assetId, fallbackAlt).catch(handleUiError);
+    return preview;
+  }
+
   function sceneIds() {
     return workingDocument ? Object.keys(workingDocument.scenes) : [];
   }
@@ -296,6 +452,7 @@
   }
 
   function renderProject() {
+    pruneInlineImagePreviewCache();
     ensureAuxiliaryPanels();
     els.revision.textContent = `Draft r${project.draftRevision}`;
     els.contentRevision.textContent = `Save compatibility ${workingDocument.content_revision}`;
@@ -620,12 +777,24 @@
     expressionLabel.textContent = 'expression';
     const expressionIds = Object.keys(workingDocument.characters[event.character].expressions);
     const expression = makeSelect(expressionIds, event.expression, `${event.id} のexpression`);
+    const selectedCharacter = workingDocument.characters[event.character];
+    const characterPreview = makeInlineImagePreview(
+      selectedCharacter.expressions[event.expression],
+      'character',
+      `${selectedCharacter.name}の${event.expression}画像`,
+    );
     expression.addEventListener('change', () => {
       event.expression = expression.value;
       markDirty();
+      const assetId = selectedCharacter.expressions[event.expression];
+      void updateInlineImagePreview(
+        characterPreview,
+        assetId,
+        `${selectedCharacter.name}の${event.expression}画像`,
+      ).catch(handleUiError);
     });
     expressionLabel.appendChild(expression);
-    card.appendChild(expressionLabel);
+    card.append(expressionLabel, characterPreview);
   }
 
   function renderBgmEvent(card, event) {
@@ -673,11 +842,22 @@
     eventHeading(card, event);
 
     if (event.type === 'background') {
-      card.appendChild(
+      const backgroundPreview = makeInlineImagePreview(
+        event.asset,
+        'background',
+        `${event.id} の背景画像`,
+      );
+      card.append(
         assetSelect(event.asset, 'image', `${event.id} の背景素材`, (value) => {
           event.asset = value;
           markDirty();
+          void updateInlineImagePreview(
+            backgroundPreview,
+            value,
+            `${event.id} の背景画像`,
+          ).catch(handleUiError);
         }),
+        backgroundPreview,
       );
       return card;
     }
