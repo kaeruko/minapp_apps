@@ -34,6 +34,7 @@
   const saveButton = requiredButton('save-button');
   const previewButton = requiredButton('preview-button');
   const publishButton = requiredButton('publish-button');
+  const startSceneSelect = requiredSelect('start-scene');
   const workspace = document.querySelector('.workspace');
   const app = document.querySelector('.app');
   if (!(workspace instanceof HTMLElement) || !(app instanceof HTMLElement)) {
@@ -68,6 +69,12 @@
   function requiredButton(id) {
     const element = document.getElementById(id);
     if (!(element instanceof HTMLButtonElement)) throw new Error(`Simple UI requires button #${id}`);
+    return element;
+  }
+
+  function requiredSelect(id) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLSelectElement)) throw new Error(`Simple UI requires select #${id}`);
     return element;
   }
 
@@ -399,6 +406,26 @@
     return label ? `シーン ${index + 1}　${label}` : `シーン ${index + 1}`;
   }
 
+  function sceneOptionDisplay(rawId, index) {
+    return SAMPLE_SCENE_LABELS[rawId] || `シーン ${index + 1}`;
+  }
+
+  function translateSceneOptions(select) {
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new TypeError('Scene select must be an HTMLSelectElement');
+    }
+    const sceneIds = Array.from(sceneList.querySelectorAll('.scene-button')).map(sceneId);
+    for (const option of select.options) {
+      const index = sceneIds.indexOf(option.value);
+      if (index < 0) {
+        throw new Error(`Scene select contains unknown scene id: ${option.value}`);
+      }
+      const display = sceneOptionDisplay(option.value, index);
+      if (option.textContent !== display) option.textContent = display;
+      option.dataset.sceneId = option.value;
+    }
+  }
+
   function nextSceneId() {
     const used = new Set(Array.from(sceneList.querySelectorAll('.scene-button')).map(sceneId));
     for (let index = 1; index <= 999999; index += 1) {
@@ -421,6 +448,8 @@
         button.addEventListener('click', () => setView('editor'));
       }
     });
+
+    translateSceneOptions(startSceneSelect);
 
     const form = Array.from(sceneList.children).find((child) => child.classList?.contains('asset-form'));
     if (!(form instanceof HTMLElement)) return;
@@ -496,6 +525,19 @@
       }
     }
     decorateFields(card);
+    if (rawType === 'choice') {
+      const targets = card.querySelectorAll('.choice-row select');
+      if (targets.length === 0) {
+        throw new Error('Choice event is missing scene target selects');
+      }
+      for (const target of targets) translateSceneOptions(target);
+    } else if (rawType === 'goto') {
+      const target = card.querySelector('label select');
+      if (!(target instanceof HTMLSelectElement)) {
+        throw new Error('Goto event is missing a scene target select');
+      }
+      translateSceneOptions(target);
+    }
     return true;
   }
 
