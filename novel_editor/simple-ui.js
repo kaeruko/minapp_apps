@@ -10,7 +10,7 @@
   const SAMPLE_SCENE_LABELS = Object.freeze({
     start: '放課後の教室',
     rooftop: '屋上',
-    together: 'ふたりの秘密',
+    together: 'となりに座る',
     photo: '写真を撮る',
     leave: '帰る',
   });
