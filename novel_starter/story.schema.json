@@ -34,6 +34,13 @@
     "start_scene": {
       "$ref": "#/$defs/id"
     },
+    "scene_order": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
     "assets": {
       "type": "object",
       "propertyNames": {
