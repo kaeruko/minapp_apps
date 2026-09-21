@@ -142,6 +142,7 @@
       content_revision: 1,
       title: '新しいノベル',
       start_scene: 'scene_001',
+      scene_order: ['scene_001'],
       assets: {},
       characters: {},
       scenes: {
@@ -367,15 +368,24 @@
     return { scene, event: scene.events[index], index };
   }
 
+  function ensureSceneOrder(document) {
+    if (!Array.isArray(document.scene_order)) {
+      document.scene_order = Object.keys(document.scenes || {});
+    }
+    return document.scene_order;
+  }
+
   function addScene(document, sceneId, validateStory) {
     const id = requireEditorId(sceneId, 'sceneId');
     return mutateValidated(document, validateStory, (next) => {
       if (next.scenes[id]) fail('duplicate_scene_id', `scene ${id} already exists`);
+      const order = ensureSceneOrder(next);
       next.scenes[id] = {
         id,
         title: '',
         events: [{ id: nextEventId(next), type: 'end', label: 'END' }],
       };
+      order.push(id);
     });
   }
 
@@ -391,6 +401,7 @@
   function removeScene(document, sceneId, validateStory) {
     return mutateValidated(document, validateStory, (next) => {
       requireScene(next, sceneId);
+      const order = ensureSceneOrder(next);
       if (Object.keys(next.scenes).length <= 1) {
         fail('last_scene', 'the last scene cannot be deleted');
       }
@@ -413,6 +424,9 @@
         }
       }
       delete next.scenes[sceneId];
+      const orderIndex = order.indexOf(sceneId);
+      if (orderIndex < 0) fail('invalid_scene_order', `scene ${sceneId} is missing from scene_order`);
+      order.splice(orderIndex, 1);
     });
   }
 
