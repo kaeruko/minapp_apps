@@ -596,20 +596,39 @@
     }
 
     for (const [characterId, character] of characters) {
-      const card = document.createElement('div');
-      card.className = 'asset-row';
-      const heading = document.createElement('div');
-      heading.className = 'event-heading';
-      const id = document.createElement('strong');
-      id.textContent = characterId;
-      const removeCharacter = makeButton('キャラ削除', 'mini-button danger', () => {
-        runMutation(
-          () => core.removeCharacter(workingDocument, characterId, formatApi.validateStory),
-          `キャラクター ${characterId} を削除しました。保存してください`,
+      const expressionEntries = Object.entries(character.expressions);
+      if (expressionEntries.length === 0) {
+        throw Object.assign(
+          new Error(`キャラクター ${characterId} に表情がありません`),
+          { code: 'character_expression_missing' },
         );
-      });
-      heading.append(id, removeCharacter);
-      card.appendChild(heading);
+      }
+
+      const card = document.createElement('div');
+      card.className = 'asset-row character-card';
+      card.dataset.characterId = characterId;
+
+      const summary = document.createElement('div');
+      summary.className = 'character-summary';
+      const [firstExpressionId, firstAssetId] = expressionEntries[0];
+      const summaryPreview = makeInlineImagePreview(
+        firstAssetId,
+        'character-thumb',
+        `${character.name}の${firstExpressionId}画像`,
+      );
+      const summaryCopy = document.createElement('div');
+      summaryCopy.className = 'character-summary-copy';
+      const summaryName = document.createElement('strong');
+      summaryName.textContent = character.name;
+      const summaryId = document.createElement('code');
+      summaryId.className = 'technical-id';
+      summaryId.textContent = characterId;
+      summaryCopy.append(summaryName, summaryId);
+      summary.append(summaryPreview, summaryCopy);
+      card.appendChild(summary);
+
+      const detail = document.createElement('div');
+      detail.className = 'character-detail';
 
       const nameLabel = document.createElement('label');
       nameLabel.textContent = '表示名';
@@ -620,18 +639,30 @@
       nameInput.addEventListener('input', () => {
         if (busy) return;
         character.name = nameInput.value;
+        summaryName.textContent = nameInput.value;
         markDirty();
       });
       nameLabel.appendChild(nameInput);
-      card.appendChild(nameLabel);
+      detail.appendChild(nameLabel);
 
       const expressionHeading = document.createElement('strong');
-      expressionHeading.textContent = '表情';
-      card.appendChild(expressionHeading);
-      for (const [expressionId, assetId] of Object.entries(character.expressions)) {
-        const row = document.createElement('div');
-        row.className = 'choice-row';
-        const label = document.createElement('code');
+      expressionHeading.textContent = '表情・立ち絵';
+      detail.appendChild(expressionHeading);
+
+      for (const [expressionId, assetId] of expressionEntries) {
+        const expressionCard = document.createElement('div');
+        expressionCard.className = 'character-expression-card';
+
+        const expressionPreview = makeInlineImagePreview(
+          assetId,
+          'character',
+          `${character.name}の${expressionId}画像`,
+        );
+
+        const controls = document.createElement('div');
+        controls.className = 'character-expression-controls';
+        const label = document.createElement('strong');
+        label.className = 'character-expression-name';
         label.textContent = expressionId;
         const select = makeSelect(images, assetId, `${characterId}.${expressionId} の画像素材`);
         select.addEventListener('change', () => {
@@ -646,7 +677,7 @@
             `${characterId}.${expressionId} の画像を変更しました。保存してください`,
           );
         });
-        const remove = makeButton('削除', 'mini-button danger', () => {
+        const remove = makeButton('この表情を削除', 'mini-button danger', () => {
           runMutation(
             () => core.removeCharacterExpression(
               workingDocument,
@@ -657,19 +688,37 @@
             `${characterId}.${expressionId} を削除しました。保存してください`,
           );
         });
-        row.append(label, select, remove);
-        card.appendChild(row);
+        controls.append(label, select, remove);
+        expressionCard.append(expressionPreview, controls);
+        detail.appendChild(expressionCard);
       }
 
       const addExpression = document.createElement('div');
-      addExpression.className = 'asset-form';
+      addExpression.className = 'asset-form character-expression-create';
+      const addExpressionTitle = document.createElement('strong');
+      addExpressionTitle.textContent = '表情を追加';
       const expressionIdInput = markEditorControl(document.createElement('input'));
       expressionIdInput.type = 'text';
       expressionIdInput.maxLength = 64;
       expressionIdInput.placeholder = 'smile';
       expressionIdInput.setAttribute('aria-label', `${characterId} の新しい表情ID`);
       const imageSelect = makeSelect(images, images[0], `${characterId} の新しい表情画像`);
-      const addExpressionButton = makeButton('＋ 表情追加', 'mini-button', () => {
+      let addExpressionPreview = null;
+      if (images.length > 0) {
+        addExpressionPreview = makeInlineImagePreview(
+          images[0],
+          'character',
+          `${character.name}の新しい表情画像`,
+        );
+        imageSelect.addEventListener('change', () => {
+          void updateInlineImagePreview(
+            addExpressionPreview,
+            imageSelect.value,
+            `${character.name}の新しい表情画像`,
+          ).catch(handleUiError);
+        });
+      }
+      const addExpressionButton = makeButton('＋ 表情を追加', 'mini-button', () => {
         const expressionId = expressionIdInput.value.trim();
         runMutation(
           () => core.addCharacterExpression(
@@ -683,13 +732,25 @@
         );
       });
       addExpressionButton.disabled = images.length === 0;
-      addExpression.append(expressionIdInput, imageSelect, addExpressionButton);
-      card.appendChild(addExpression);
+      addExpression.append(addExpressionTitle, expressionIdInput, imageSelect);
+      if (addExpressionPreview) addExpression.appendChild(addExpressionPreview);
+      addExpression.appendChild(addExpressionButton);
+      detail.appendChild(addExpression);
+
+      const removeCharacter = makeButton('キャラクターを削除', 'mini-button danger character-delete', () => {
+        runMutation(
+          () => core.removeCharacter(workingDocument, characterId, formatApi.validateStory),
+          `キャラクター ${characterId} を削除しました。保存してください`,
+        );
+      });
+      detail.appendChild(removeCharacter);
+
+      card.appendChild(detail);
       characterList.appendChild(card);
     }
 
     const create = document.createElement('div');
-    create.className = 'asset-form';
+    create.className = 'asset-form character-create-form';
     const title = document.createElement('strong');
     title.textContent = '新しいキャラクター';
     const idInput = markEditorControl(document.createElement('input'));
@@ -708,6 +769,17 @@
     expressionInput.placeholder = 'normal';
     expressionInput.setAttribute('aria-label', '最初の表情ID');
     const imageSelect = makeSelect(images, images[0], '最初の表情画像');
+    let createPreview = null;
+    if (images.length > 0) {
+      createPreview = makeInlineImagePreview(images[0], 'character', '新しいキャラクターの立ち絵');
+      imageSelect.addEventListener('change', () => {
+        void updateInlineImagePreview(
+          createPreview,
+          imageSelect.value,
+          '新しいキャラクターの立ち絵',
+        ).catch(handleUiError);
+      });
+    }
     const add = makeButton('＋ キャラ追加', 'secondary', () => {
       const characterId = idInput.value.trim();
       runMutation(
@@ -725,9 +797,11 @@
     add.disabled = images.length === 0;
     const help = document.createElement('p');
     help.textContent = images.length === 0
-      ? 'キャラクター用の画像素材を追加してください。背景に使っている画像は候補に表示されません。'
-      : '最初の表情を1つ指定して作成します。背景に使っている画像は候補に表示されません。';
-    create.append(title, idInput, nameInput, expressionInput, imageSelect, add, help);
+      ? '先に「立ち絵」から画像素材を追加してください。'
+      : '最初の表情と立ち絵を1つ指定して作成します。';
+    create.append(title, idInput, nameInput, expressionInput, imageSelect);
+    if (createPreview) create.appendChild(createPreview);
+    create.append(add, help);
     characterList.appendChild(create);
   }
 
@@ -1294,6 +1368,24 @@
     setStatus(`素材 ${assetId} をDraftへ反映しました`, 'ok');
   }
 
+  function assetUsageRoles(assetId) {
+    const roles = new Set();
+    for (const character of Object.values(workingDocument.characters)) {
+      for (const usedAssetId of Object.values(character.expressions)) {
+        if (usedAssetId === assetId) roles.add('character');
+      }
+    }
+    for (const scene of Object.values(workingDocument.scenes)) {
+      for (const event of scene.events) {
+        if (event.asset !== assetId) continue;
+        if (event.type === 'background') roles.add('background');
+        else if (event.type === 'bgm') roles.add('bgm');
+        else if (event.type === 'se') roles.add('se');
+      }
+    }
+    return roles;
+  }
+
   function renderAssets() {
     clearAssetPreview();
     els.assetList.replaceChildren();
@@ -1310,6 +1402,9 @@
     for (const [assetId, asset] of logicalEntries) {
       const row = document.createElement('div');
       row.className = 'asset-row';
+      row.dataset.assetId = assetId;
+      row.dataset.assetKind = asset.kind;
+      row.dataset.assetRoles = Array.from(assetUsageRoles(assetId)).join(' ');
       const info = document.createElement('div');
       const title = document.createElement('strong');
       title.textContent = assetId;
@@ -1354,6 +1449,7 @@
       if (referencedPaths.has(serverAsset.path)) continue;
       const row = document.createElement('div');
       row.className = 'asset-row orphan';
+      row.dataset.assetOrphan = '1';
       const info = document.createElement('div');
       const title = document.createElement('strong');
       title.textContent = '未参照素材';
