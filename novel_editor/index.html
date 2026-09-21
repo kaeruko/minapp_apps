@@ -198,6 +198,126 @@
     .asset-row > div:first-child { display: grid; gap: 4px; min-width: 0; }
     .asset-row.orphan { border-style: dashed; background: #fffaf0; }
     .asset-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .settings-category-home {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .settings-category-home h3 { margin: 0; font-size: 16px; }
+    .settings-category-home p { margin: 0; color: #756582; font-size: 12px; line-height: 1.6; }
+    .settings-category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+    .settings-category-button {
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255,255,255,.92);
+      color: var(--ink);
+      text-align: left;
+      font-weight: 900;
+    }
+    .settings-category-button .category-icon { font-size: 24px; text-align: center; }
+    .settings-category-button .category-arrow { color: #9e8ca8; font-size: 20px; }
+    .settings-category-button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+    .settings-subnav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+    }
+    .settings-subnav[hidden] { display: none !important; }
+    .settings-subnav button {
+      min-height: 38px;
+      padding: 7px 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.9);
+      color: #6a5574;
+      font-weight: 900;
+    }
+    .settings-subnav strong { font-size: 16px; }
+
+    .character-card {
+      padding: 0;
+      overflow: hidden;
+    }
+    .character-summary {
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+    }
+    .character-summary-copy {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+    .character-summary-copy strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 15px;
+    }
+    .character-open {
+      min-height: 38px;
+      white-space: nowrap;
+    }
+    .character-detail {
+      display: grid;
+      gap: 12px;
+      padding: 0 10px 12px;
+      border-top: 1px solid #f0e6f1;
+    }
+    .character-detail > label:first-child { margin-top: 12px; }
+    .character-expression-card {
+      display: grid;
+      grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr);
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid #eee2ef;
+      border-radius: 14px;
+      background: #fffafd;
+    }
+    .character-expression-controls {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      min-width: 0;
+    }
+    .character-expression-name { font-size: 13px; }
+    .character-delete { width: 100%; margin-top: 4px; }
+    .character-create-form {
+      padding: 12px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.78);
+    }
+    .character-expression-create {
+      padding-top: 10px;
+      border-top: 1px dashed #eaddea;
+    }
+
+    body[data-settings-section="characters"] .character-card .character-detail {
+      display: none;
+    }
+    body[data-settings-section="character-detail"] #character-list > .character-card:not([data-settings-active="true"]),
+    body[data-settings-section="character-detail"] #character-list > .character-create-form {
+      display: none !important;
+    }
+    body[data-settings-section="character-detail"] .character-open {
+      display: none !important;
+    }
     .mini-button {
       border: 0;
       border-radius: 9px;
@@ -281,13 +401,19 @@
     .inline-image-preview[data-variant="character"] .inline-image-preview-frame {
       height: clamp(150px, 42vw, 220px);
     }
+    .inline-image-preview[data-variant="character-thumb"] .inline-image-preview-frame {
+      width: 68px;
+      height: 68px;
+      border-radius: 12px;
+    }
     .inline-image-preview img {
       display: block;
       width: 100%;
       height: 100%;
     }
     .inline-image-preview[data-variant="background"] img { object-fit: cover; }
-    .inline-image-preview[data-variant="character"] img {
+    .inline-image-preview[data-variant="character"] img,
+    .inline-image-preview[data-variant="character-thumb"] img {
       object-fit: contain;
       object-position: center bottom;
     }
@@ -365,6 +491,12 @@
       body[data-simple-view="settings"] .scene-pane,
       body[data-simple-view="settings"] .editor-pane { display: none; }
       .scene-pane, .editor-pane, .settings-pane { padding: 14px; }
+      .settings-category-grid { grid-template-columns: 1fr; }
+      .settings-category-button:last-child:nth-child(odd) { grid-column: auto; }
+      .character-expression-card { grid-template-columns: 1fr; }
+      .character-expression-card .inline-image-preview[data-variant="character"] .inline-image-preview-frame {
+        height: clamp(180px, 58vw, 280px);
+      }
       .scene-row > .danger {
         display: inline-flex;
         align-items: center;
@@ -449,11 +581,11 @@
 
       <aside id="settings-pane" class="pane settings-pane">
         <div class="pane-heading">
-          <h2>作品設定</h2>
+          <h2>設定</h2>
           <button id="close-project-settings" class="ghost-button mobile-only" type="button">閉じる</button>
         </div>
 
-        <section class="settings-card">
+        <section id="project-settings-card" class="settings-card">
           <h3>最初のシーン</h3>
           <p>通常はシーン1のままで大丈夫です。</p>
           <label>
@@ -464,7 +596,7 @@
 
         <div id="character-settings-slot"></div>
 
-        <section class="side-card">
+        <section id="asset-settings-card" class="side-card">
           <h3>画像・音楽</h3>
           <p>背景、立ち絵、BGM、効果音に使う素材を追加できます。</p>
           <div class="asset-form">
