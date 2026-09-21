@@ -514,6 +514,8 @@
   function renderSceneList() {
     els.sceneList.replaceChildren();
     for (const sceneId of sceneIds()) {
+      const scene = workingDocument.scenes[sceneId];
+      if (!scene) throw new Error(`Scene ${sceneId} was not found while rendering the scene list`);
       const row = document.createElement('div');
       row.style.display = 'flex';
       row.style.gap = '6px';
@@ -524,6 +526,8 @@
       button.type = 'button';
       button.className = 'scene-button';
       button.dataset.selected = String(sceneId === selectedSceneId);
+      button.dataset.sceneTitleDefined = Object.prototype.hasOwnProperty.call(scene, 'title') ? '1' : '0';
+      button.dataset.sceneTitle = Object.prototype.hasOwnProperty.call(scene, 'title') ? scene.title : '';
       button.textContent = sceneId;
       button.addEventListener('click', () => {
         if (busy) return;
@@ -1038,6 +1042,24 @@
     note.textContent = 'stable IDは編集しません';
     heading.append(title, note);
     els.eventEditor.appendChild(heading);
+
+    const sceneTitleLabel = document.createElement('label');
+    sceneTitleLabel.className = 'scene-title-field';
+    sceneTitleLabel.textContent = 'シーン名';
+    const sceneTitleInput = markEditorControl(document.createElement('input'));
+    sceneTitleInput.type = 'text';
+    sceneTitleInput.maxLength = 100;
+    sceneTitleInput.value = Object.prototype.hasOwnProperty.call(scene, 'title') ? scene.title : '';
+    sceneTitleInput.placeholder = '例：屋上 / 放課後の教室';
+    sceneTitleInput.setAttribute('aria-label', `${selectedSceneId} のシーン名`);
+    sceneTitleInput.addEventListener('input', () => {
+      scene.title = sceneTitleInput.value;
+      markDirty();
+      renderSceneList();
+    });
+    sceneTitleLabel.appendChild(sceneTitleInput);
+    els.eventEditor.appendChild(sceneTitleLabel);
+
     for (const event of scene.events) {
       els.eventEditor.appendChild(eventCard(event));
     }
