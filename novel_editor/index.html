@@ -329,6 +329,53 @@
     }
     .mini-button.danger { background: #ffe6e9; color: #942d42; }
 
+    .editor-confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(52, 38, 57, .48);
+      backdrop-filter: blur(5px);
+    }
+    .editor-confirm-dialog {
+      width: min(360px, 100%);
+      display: grid;
+      gap: 14px;
+      padding: 20px;
+      border: 1px solid #ead8ea;
+      border-radius: 22px;
+      background: #fffafc;
+      box-shadow: 0 24px 70px rgba(47, 28, 56, .24);
+    }
+    .editor-confirm-dialog h2 {
+      margin: 0;
+      color: #5e4865;
+      font-size: 18px;
+    }
+    .editor-confirm-dialog p {
+      margin: 0;
+      color: #5f505f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .editor-confirm-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    .editor-confirm-actions button {
+      min-height: 44px;
+      border-radius: 13px;
+      font-weight: 900;
+    }
+    .editor-confirm-actions .danger {
+      border: 0;
+      background: #f4a7b8;
+      color: #6e2637;
+    }
+
     .event-menu { position: relative; }
     .event-menu > summary {
       list-style: none;
