@@ -549,11 +549,18 @@
       });
 
       const remove = makeButton('削除', 'mini-button danger', () => {
+        const displayName = scene.title ? `「${scene.title}」` : sceneId;
+        if (!window.confirm(`${displayName} を削除しますか？`)) return;
         runMutation(
           () => core.removeScene(workingDocument, sceneId, formatApi.validateStory),
           `シーン ${sceneId} を削除しました。保存してください`,
         );
       });
+      remove.setAttribute('aria-label', `${scene.title || sceneId} を削除`);
+      if (sceneId === workingDocument.start_scene) {
+        remove.disabled = true;
+        remove.title = '開始シーンは削除できません';
+      }
       row.append(button, remove);
       els.sceneList.appendChild(row);
     }
