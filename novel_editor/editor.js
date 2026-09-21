@@ -449,7 +449,19 @@
   }
 
   function sceneIds() {
-    return workingDocument ? Object.keys(workingDocument.scenes) : [];
+    if (!workingDocument) return [];
+    if (!Array.isArray(workingDocument.scene_order)) return Object.keys(workingDocument.scenes);
+    const sceneKeys = Object.keys(workingDocument.scenes);
+    if (
+      workingDocument.scene_order.length !== sceneKeys.length ||
+      workingDocument.scene_order.some((sceneId) => !workingDocument.scenes[sceneId]) ||
+      new Set(workingDocument.scene_order).size !== workingDocument.scene_order.length
+    ) {
+      throw Object.assign(new Error('scene_order が scenes と一致しません'), {
+        code: 'invalid_scene_order',
+      });
+    }
+    return [...workingDocument.scene_order];
   }
 
   function characterIds() {
