@@ -91,6 +91,7 @@ function expectCode(fn, code) {
   assert.strictEqual(validated.content_revision, 1);
   assert.strictEqual(validated.title, '新しいノベル');
   assert.strictEqual(validated.start_scene, 'scene_001');
+  assert.deepStrictEqual(validated.scene_order, ['scene_001']);
   assert.strictEqual(validated.scenes.scene_001.title, '');
   assert.strictEqual(validated.scenes.scene_001.events[0].type, 'dialogue');
   assert.strictEqual(validated.scenes.scene_001.events[1].type, 'end');
@@ -240,6 +241,7 @@ function expectCode(fn, code) {
   );
 
   document = core.addScene(document, 'hall', format.validateStory);
+  assert.deepStrictEqual(document.scene_order, ['start', 'hall']);
   assert.strictEqual(document.scenes.hall.title, '');
   assert.strictEqual(document.scenes.hall.events.length, 1);
   assert.strictEqual(document.scenes.hall.events[0].type, 'end');
@@ -346,6 +348,15 @@ function expectCode(fn, code) {
     () => core.removeScene(document, 'hall', format.validateStory),
     'scene_in_use',
   );
+}
+
+{
+  let document = editableStory();
+  document = core.addScene(document, 'hall', format.validateStory);
+  document = core.addScene(document, 'roof', format.validateStory);
+  assert.deepStrictEqual(document.scene_order, ['start', 'hall', 'roof']);
+  document = core.removeScene(document, 'roof', format.validateStory);
+  assert.deepStrictEqual(document.scene_order, ['start', 'hall']);
 }
 
 // Dependency gaps fail explicitly; the helpers do not select another event kind
