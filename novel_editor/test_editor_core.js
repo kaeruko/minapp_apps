@@ -91,6 +91,7 @@ function expectCode(fn, code) {
   assert.strictEqual(validated.content_revision, 1);
   assert.strictEqual(validated.title, '新しいノベル');
   assert.strictEqual(validated.start_scene, 'scene_001');
+  assert.strictEqual(validated.scenes.scene_001.title, '');
   assert.strictEqual(validated.scenes.scene_001.events[0].type, 'dialogue');
   assert.strictEqual(validated.scenes.scene_001.events[1].type, 'end');
 }
@@ -239,8 +240,18 @@ function expectCode(fn, code) {
   );
 
   document = core.addScene(document, 'hall', format.validateStory);
+  assert.strictEqual(document.scenes.hall.title, '');
   assert.strictEqual(document.scenes.hall.events.length, 1);
   assert.strictEqual(document.scenes.hall.events[0].type, 'end');
+
+  document = core.setSceneTitle(document, 'hall', '廊下', format.validateStory);
+  assert.strictEqual(document.scenes.hall.title, '廊下');
+  document = core.setSceneTitle(document, 'hall', '', format.validateStory);
+  assert.strictEqual(document.scenes.hall.title, '');
+  expectCode(
+    () => core.setSceneTitle(document, 'hall', 'x'.repeat(101), format.validateStory),
+    'invalid_editor_value',
+  );
 
   for (const eventType of ['background', 'character', 'dialogue', 'choice', 'goto', 'bgm', 'se', 'end']) {
     document = core.addEvent(document, 'hall', eventType, format.validateStory);
