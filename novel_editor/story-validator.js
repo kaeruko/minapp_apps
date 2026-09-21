@@ -223,7 +223,7 @@
     const story = requireObject(rawStory, '$');
     requireExactKeys(
       story,
-      ['content_format', 'schema_version', 'content_revision', 'title', 'start_scene', 'assets', 'characters', 'scenes'],
+      ['content_format', 'schema_version', 'content_revision', 'title', 'start_scene', 'scene_order', 'assets', 'characters', 'scenes'],
       ['content_format', 'schema_version', 'content_revision', 'title', 'start_scene', 'assets', 'characters', 'scenes'],
       '$'
     );
@@ -256,6 +256,24 @@
       if (lastType !== 'choice' && lastType !== 'goto' && lastType !== 'end') {
         fail('unterminated_scene', `${path}.events`, 'last event must be choice, goto, or end');
       }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(story, 'scene_order')) {
+      const order = requireArray(story.scene_order, '$.scene_order');
+      if (order.length !== Object.keys(scenes).length) {
+        fail('invalid_scene_order', '$.scene_order', 'must contain every scene exactly once');
+      }
+      const seen = new Set();
+      order.forEach((sceneId, index) => {
+        requireId(sceneId, `$.scene_order[${index}]`);
+        if (seen.has(sceneId)) {
+          fail('invalid_scene_order', `$.scene_order[${index}]`, `scene ${sceneId} is duplicated`);
+        }
+        if (!scenes[sceneId]) {
+          fail('missing_scene', `$.scene_order[${index}]`, `scene ${sceneId} does not exist`);
+        }
+        seen.add(sceneId);
+      });
     }
 
     if (!scenes[story.start_scene]) fail('missing_scene', '$.start_scene', `scene ${story.start_scene} does not exist`);
