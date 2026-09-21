@@ -43,6 +43,15 @@ assert.equal(validateStory(validStory()).content_format, FORMAT);
 
 {
   const story = validStory();
+  story.scene_order = ['start'];
+  assert.deepEqual(validateStory(story).scene_order, ['start']);
+}
+
+expectCode((story) => { story.scene_order = ['missing']; }, 'missing_scene');
+expectCode((story) => { story.scene_order = ['start', 'start']; }, 'invalid_scene_order');
+
+{
+  const story = validStory();
   story.scenes.start.title = '放課後の教室';
   assert.equal(validateStory(story).scenes.start.title, '放課後の教室');
 }
