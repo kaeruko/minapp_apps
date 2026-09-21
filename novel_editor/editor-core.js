@@ -147,6 +147,7 @@
       scenes: {
         scene_001: {
           id: 'scene_001',
+          title: '',
           events: [
             {
               id: 'event_001',
@@ -372,8 +373,18 @@
       if (next.scenes[id]) fail('duplicate_scene_id', `scene ${id} already exists`);
       next.scenes[id] = {
         id,
+        title: '',
         events: [{ id: nextEventId(next), type: 'end', label: 'END' }],
       };
+    });
+  }
+
+  function setSceneTitle(document, sceneId, title, validateStory) {
+    if (typeof title !== 'string' || title.length > 100) {
+      fail('invalid_editor_value', 'scene title must be a string of at most 100 characters');
+    }
+    return mutateValidated(document, validateStory, (next) => {
+      requireScene(next, sceneId).title = title;
     });
   }
 
@@ -636,6 +647,7 @@
     validatePublishResponse,
     deepClone,
     addScene,
+    setSceneTitle,
     removeScene,
     addCharacter,
     setCharacterName,
