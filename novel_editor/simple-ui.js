@@ -15,6 +15,58 @@
     leave: '帰る',
   });
   const SIMPLE_VIEWS = Object.freeze(['scenes', 'editor', 'settings', 'publish']);
+  const SETTINGS_SECTIONS = Object.freeze({
+    characters: {
+      icon: '👤',
+      label: 'キャラ',
+      title: 'キャラ',
+      description: '登場人物を選んで、名前・表情・立ち絵を編集します。',
+    },
+    background: {
+      icon: '🖼️',
+      label: '背景',
+      title: '背景',
+      description: 'シーン背景に使う画像を追加・確認します。',
+      kind: 'image',
+      role: 'background',
+      oppositeRole: 'character',
+      accept: '.png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp',
+      uploadLabel: '背景画像ファイル',
+    },
+    standing: {
+      icon: '🧍',
+      label: '立ち絵',
+      title: '立ち絵',
+      description: 'キャラクターの表情に使う立ち絵画像を追加・確認します。',
+      kind: 'image',
+      role: 'character',
+      oppositeRole: 'background',
+      accept: '.png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp',
+      uploadLabel: '立ち絵画像ファイル',
+    },
+    bgm: {
+      icon: '🎵',
+      label: 'BGM',
+      title: 'BGM',
+      description: 'シーンで流すBGM素材を追加・確認します。',
+      kind: 'audio',
+      role: 'bgm',
+      oppositeRole: 'se',
+      accept: '.mp3,.m4a,.ogg,.wav,audio/mpeg,audio/mp4,audio/ogg,audio/wav',
+      uploadLabel: 'BGMファイル',
+    },
+    se: {
+      icon: '🔊',
+      label: '効果音',
+      title: '効果音',
+      description: 'シーンで鳴らす効果音素材を追加・確認します。',
+      kind: 'audio',
+      role: 'se',
+      oppositeRole: 'bgm',
+      accept: '.mp3,.m4a,.ogg,.wav,audio/mpeg,audio/mp4,audio/ogg,audio/wav',
+      uploadLabel: '効果音ファイル',
+    },
+  });
   const SHORT_STATUS_MESSAGES = new Set([
     '作品を読み込んでいます',
     '読み込みました',
@@ -26,6 +78,11 @@
   const eventEditor = required('event-editor');
   const settingsPane = required('settings-pane');
   const characterSlot = required('character-settings-slot');
+  const projectSettingsCard = required('project-settings-card');
+  const assetSettingsCard = required('asset-settings-card');
+  const assetList = required('asset-list');
+  const assetFile = requiredInput('asset-file');
+  const assetSaveButton = requiredButton('asset-save-button');
   const openSettings = required('open-project-settings');
   const closeSettings = required('close-project-settings');
   const sceneBack = required('scene-back');
@@ -53,6 +110,12 @@
   let projectHeroTitle = null;
   let projectHeroStatus = null;
   let projectHeroSave = null;
+  let settingsHome = null;
+  let settingsSubnav = null;
+  let settingsSubnavBack = null;
+  let settingsSubnavTitle = null;
+  let settingsSection = 'root';
+  let selectedCharacterId = null;
 
   function required(id) {
     const element = document.getElementById(id);
@@ -328,8 +391,12 @@
 
   function setView(view) {
     if (!SIMPLE_VIEWS.includes(view)) throw new TypeError(`Unsupported simple UI view: ${view}`);
+    const previousView = document.body.dataset.simpleView || 'scenes';
     document.body.dataset.simpleView = view;
-    if (view === 'settings') settingsPane.scrollTop = 0;
+    if (view === 'settings') {
+      if (previousView !== 'settings') setSettingsSection('root');
+      settingsPane.scrollTop = 0;
+    }
     const publishPane = document.querySelector('.publish-pane');
     if (view === 'publish' && publishPane instanceof HTMLElement) publishPane.scrollTop = 0;
     syncFooter(view);
@@ -485,13 +552,233 @@
     }
   }
 
+  function ensureSettingsNavigation() {
+    if (settingsHome && settingsSubnav) return;
+
+    const paneHeading = settingsPane.querySelector(':scope > .pane-heading');
+    if (!(paneHeading instanceof HTMLElement)) {
+      throw new Error('Settings pane heading is missing');
+    }
+
+    const subnav = document.createElement('div');
+    subnav.className = 'settings-subnav';
+    subnav.hidden = true;
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.textContent = '← 設定';
+    const title = document.createElement('strong');
+    subnav.append(back, title);
+    paneHeading.insertAdjacentElement('afterend', subnav);
+
+    const home = document.createElement('section');
+    home.className = 'settings-category-home';
+    const heading = document.createElement('h3');
+    heading.textContent = 'キャラ・素材';
+    const note = document.createElement('p');
+    note.textContent = '編集したい項目を選んでください。';
+    const grid = document.createElement('div');
+    grid.className = 'settings-category-grid';
+
+    for (const [section, config] of Object.entries(SETTINGS_SECTIONS)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'settings-category-button';
+      button.dataset.settingsTarget = section;
+      button.innerHTML = `<span class="category-icon" aria-hidden="true">${config.icon}</span><span>${config.label}</span><span class="category-arrow" aria-hidden="true">›</span>`;
+      button.addEventListener('click', () => setSettingsSection(section));
+      grid.appendChild(button);
+    }
+
+    home.append(heading, note, grid);
+    subnav.insertAdjacentElement('afterend', home);
+
+    back.addEventListener('click', () => {
+      if (settingsSection === 'character-detail') setSettingsSection('characters');
+      else setSettingsSection('root');
+    });
+
+    settingsHome = home;
+    settingsSubnav = subnav;
+    settingsSubnavBack = back;
+    settingsSubnavTitle = title;
+  }
+
+  function characterCardById(characterId) {
+    if (!characterId) return null;
+    return Array.from(characterSlot.querySelectorAll('.character-card'))
+      .find((card) => card instanceof HTMLElement && card.dataset.characterId === characterId) || null;
+  }
+
+  function characterDisplayName(characterId) {
+    const card = characterCardById(characterId);
+    const name = card?.querySelector('.character-summary-copy strong');
+    return name instanceof HTMLElement && name.textContent.trim() !== ''
+      ? name.textContent.trim()
+      : characterId;
+  }
+
+  function setSettingsSection(section, characterId) {
+    ensureSettingsNavigation();
+    if (section !== 'root' && section !== 'character-detail' && !SETTINGS_SECTIONS[section]) {
+      throw new TypeError(`Unsupported settings section: ${section}`);
+    }
+    if (section === 'character-detail') {
+      if (typeof characterId !== 'string' || characterId === '') {
+        throw new TypeError('Character detail requires a character id');
+      }
+      selectedCharacterId = characterId;
+    } else if (section !== 'characters') {
+      selectedCharacterId = null;
+    }
+
+    settingsSection = section;
+    document.body.dataset.settingsSection = section;
+
+    const advanced = settingsPane.querySelector('details.advanced-details');
+    if (settingsHome instanceof HTMLElement) settingsHome.hidden = section !== 'root';
+    projectSettingsCard.hidden = section !== 'root';
+    characterSlot.hidden = section !== 'characters' && section !== 'character-detail';
+    assetSettingsCard.hidden = !Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, section) ||
+      section === 'characters';
+    if (advanced instanceof HTMLElement) advanced.hidden = section !== 'root';
+
+    if (settingsSubnav instanceof HTMLElement &&
+        settingsSubnavBack instanceof HTMLButtonElement &&
+        settingsSubnavTitle instanceof HTMLElement) {
+      settingsSubnav.hidden = section === 'root';
+      if (section === 'character-detail') {
+        settingsSubnavBack.textContent = '← キャラ';
+        settingsSubnavTitle.textContent = 'キャラクター詳細';
+      } else if (section !== 'root') {
+        settingsSubnavBack.textContent = '← 設定';
+        settingsSubnavTitle.textContent = SETTINGS_SECTIONS[section].title;
+      }
+    }
+
+    if (section === 'character-detail') {
+      const card = characterCardById(selectedCharacterId);
+      if (!(card instanceof HTMLElement)) {
+        setSettingsSection('characters');
+        return;
+      }
+      for (const characterCard of characterSlot.querySelectorAll('.character-card')) {
+        characterCard.dataset.settingsActive =
+          characterCard === card ? 'true' : 'false';
+      }
+      if (settingsSubnavTitle instanceof HTMLElement) {
+        settingsSubnavTitle.textContent = `キャラクター詳細　${characterDisplayName(selectedCharacterId)}`;
+      }
+    } else {
+      for (const characterCard of characterSlot.querySelectorAll('.character-card')) {
+        delete characterCard.dataset.settingsActive;
+      }
+    }
+
+    decorateAssetCategory();
+    settingsPane.scrollTop = 0;
+  }
+
+  function setLabelText(label, text) {
+    if (!(label instanceof HTMLLabelElement)) {
+      throw new TypeError('Expected a label element');
+    }
+    const textNode = Array.from(label.childNodes)
+      .find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '');
+    if (!textNode) throw new Error('Settings label is missing its text node');
+    textNode.textContent = `${text}\n              `;
+  }
+
+  function assetRowVisibleForSection(row, config) {
+    if (!(row instanceof HTMLElement)) return false;
+    if (row.dataset.assetOrphan === '1') return false;
+    if (row.dataset.assetKind !== config.kind) return false;
+    const roles = new Set((row.dataset.assetRoles || '').split(/\s+/).filter(Boolean));
+    if (roles.has(config.role)) return true;
+    if (roles.has(config.oppositeRole)) return false;
+    return true;
+  }
+
+  function decorateAssetCategory() {
+    if (!Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, settingsSection) ||
+        settingsSection === 'characters') {
+      return;
+    }
+    const config = SETTINGS_SECTIONS[settingsSection];
+    if (!config.kind) return;
+
+    const heading = assetSettingsCard.querySelector('h3');
+    const note = assetSettingsCard.querySelector('h3 + p');
+    if (!(heading instanceof HTMLElement) || !(note instanceof HTMLElement)) {
+      throw new Error('Asset settings heading is incomplete');
+    }
+    heading.textContent = config.title;
+    note.textContent = config.description;
+    assetFile.accept = config.accept;
+
+    const fileLabel = assetFile.closest('label');
+    if (!(fileLabel instanceof HTMLLabelElement)) {
+      throw new Error('Asset file label is missing');
+    }
+    setLabelText(fileLabel, config.uploadLabel);
+    assetSaveButton.textContent = `＋ ${config.label}素材を追加 / 差し替え`;
+
+    let visible = 0;
+    for (const row of assetList.querySelectorAll('.asset-row')) {
+      const show = assetRowVisibleForSection(row, config);
+      row.hidden = !show;
+      if (show) visible += 1;
+    }
+
+    let empty = assetList.querySelector('.settings-category-empty');
+    if (!(empty instanceof HTMLElement)) {
+      empty = document.createElement('p');
+      empty.className = 'settings-category-empty';
+      assetList.appendChild(empty);
+    }
+    empty.textContent = `${config.label}素材はまだありません。`;
+    empty.hidden = visible !== 0;
+  }
+
   function decorateCharacters() {
     const panel = document.querySelector('#character-list')?.closest('.side-card');
     if (!(panel instanceof HTMLElement)) return;
     if (panel.parentElement !== characterSlot) characterSlot.appendChild(panel);
+
+    const heading = panel.querySelector('h3');
+    if (heading instanceof HTMLElement && heading.textContent !== 'キャラ') heading.textContent = 'キャラ';
     const note = panel.querySelector('h3 + p');
-    const copy = '名前や立ち絵、表情をまとめて設定できます。IDなどの詳細は作品データ内部で保持します。';
+    const copy = 'キャラクターを選ぶと、名前・表情・立ち絵を詳しく編集できます。';
     if (note instanceof HTMLElement && note.textContent !== copy) note.textContent = copy;
+
+    let selectedFound = false;
+    for (const card of panel.querySelectorAll('.character-card')) {
+      if (!(card instanceof HTMLElement)) continue;
+      const characterId = card.dataset.characterId;
+      if (!characterId) throw new Error('Character card is missing data-character-id');
+      const summary = card.querySelector('.character-summary');
+      if (!(summary instanceof HTMLElement)) throw new Error(`Character ${characterId} summary is missing`);
+
+      let open = summary.querySelector('.character-open');
+      if (!(open instanceof HTMLButtonElement)) {
+        open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'mini-button character-open';
+        open.textContent = '詳細 ›';
+        open.addEventListener('click', () => setSettingsSection('character-detail', characterId));
+        summary.appendChild(open);
+      }
+
+      if (settingsSection === 'character-detail' && selectedCharacterId === characterId) {
+        card.dataset.settingsActive = 'true';
+        selectedFound = true;
+      } else {
+        delete card.dataset.settingsActive;
+      }
+    }
+
+    if (settingsSection === 'character-detail' && !selectedFound) {
+      setSettingsSection('characters');
+    }
   }
 
   function translateOptions(select) {
@@ -699,8 +986,10 @@
   function decorate() {
     scheduled = false;
     ensureMobileChrome();
+    ensureSettingsNavigation();
     decorateScenes();
     decorateCharacters();
+    decorateAssetCategory();
     decorateEvents();
     decorateDiagnostics();
     decorateStatus();
@@ -755,6 +1044,7 @@
     });
   }
   document.body.dataset.simpleView = 'scenes';
+  document.body.dataset.settingsSection = 'root';
 
   const observer = new MutationObserver(scheduleDecorate);
   observer.observe(sceneList, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
