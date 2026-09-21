@@ -365,7 +365,20 @@
       body[data-simple-view="settings"] .scene-pane,
       body[data-simple-view="settings"] .editor-pane { display: none; }
       .scene-pane, .editor-pane, .settings-pane { padding: 14px; }
-      .scene-row > .danger { display: none; }
+      .scene-row > .danger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        min-height: 58px;
+        padding: 8px 9px;
+        border-radius: 14px;
+        opacity: 1;
+      }
+      .scene-row > .danger:disabled {
+        opacity: .35;
+        cursor: not-allowed;
+      }
 
       .editor-footer .footer-icon {
         display: block;
