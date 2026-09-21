@@ -261,6 +261,39 @@
       .map(([assetId]) => assetId);
   }
 
+  function backgroundImageIds() {
+    if (!workingDocument) return new Set();
+    const result = new Set();
+    for (const scene of Object.values(workingDocument.scenes)) {
+      for (const event of scene.events) {
+        if (event.type !== 'background') continue;
+        const asset = workingDocument.assets[event.asset];
+        if (!asset || asset.kind !== 'image') {
+          throw Object.assign(
+            new Error(`背景イベント ${event.id} の画像素材 ${event.asset} がありません`),
+            { code: 'background_asset_invalid' },
+          );
+        }
+        result.add(event.asset);
+      }
+    }
+    return result;
+  }
+
+  function characterImageIds() {
+    if (!workingDocument) return [];
+    const backgroundIds = backgroundImageIds();
+    const alreadyUsedByCharacter = new Set();
+    for (const character of Object.values(workingDocument.characters)) {
+      for (const assetId of Object.values(character.expressions)) {
+        alreadyUsedByCharacter.add(assetId);
+      }
+    }
+    return assetIds('image').filter(
+      (assetId) => !backgroundIds.has(assetId) || alreadyUsedByCharacter.has(assetId),
+    );
+  }
+
   function inlineImagePreviewKey(descriptor, storedAsset) {
     return `${descriptor.src}\n${storedAsset.sha256}`;
   }
@@ -530,7 +563,7 @@
 
   function renderCharacters() {
     characterList.replaceChildren();
-    const images = assetIds('image');
+    const images = characterImageIds();
     const characters = Object.entries(workingDocument.characters);
 
     if (characters.length === 0) {
@@ -669,8 +702,8 @@
     add.disabled = images.length === 0;
     const help = document.createElement('p');
     help.textContent = images.length === 0
-      ? '先に画像素材を追加してください。'
-      : '最初の表情を1つ指定して作成します。';
+      ? 'キャラクター用の画像素材を追加してください。背景に使っている画像は候補に表示されません。'
+      : '最初の表情を1つ指定して作成します。背景に使っている画像は候補に表示されません。';
     create.append(title, idInput, nameInput, expressionInput, imageSelect, add, help);
     characterList.appendChild(create);
   }
