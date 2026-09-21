@@ -3,7 +3,7 @@
 
   const EVENT_LABELS = Object.freeze({
     dialogue: '💬 セリフ', background: '🖼️ 背景', character: '👤 キャラクター',
-    choice: '⑂ 選択肢', goto: '➡️ シーン移動', bgm: '🎵 BGM', se: '🔊 効果音', end: '🏁 おわり',
+    choice: '⑂ 選択肢', goto: '➡️ シーン移動', bgm: '🎵 BGM', se: '🔊 効果音', end: '🏁 物語のおわり',
   });
   const FIELD_LABELS = Object.freeze({ speaker: '話す人', action: '動き', slot: '位置', character: 'キャラクター', expression: '表情', goto: '移動先' });
   const OPTION_LABELS = Object.freeze({ show: '表示する', hide: '隠す', left: '左', center: '中央', right: '右', play: '再生する', stop: '停止する' });
@@ -215,6 +215,9 @@
           .publish-card h2 { margin: 0; font-size: 20px; }
           .publish-card p { margin: 0; color: #756582; font-size: 13px; line-height: 1.65; }
           .publish-card button { width: 100%; min-height: 52px; }
+          body[data-simple-keyboard="true"] .mobile-project-hero,
+          body[data-simple-keyboard="true"] .editor-footer { display: none !important; }
+          body[data-simple-keyboard="true"] .pane { min-height: 100dvh; }
         }
       `;
       document.head.appendChild(style);
@@ -525,6 +528,20 @@
       }
     }
     decorateFields(card);
+    if (rawType === 'end') {
+      const endInput = card.querySelector(':scope > input[aria-label$="のENDラベル"], :scope > label.end-label-field > input[aria-label$="のENDラベル"]');
+      if (!(endInput instanceof HTMLInputElement)) {
+        throw new Error('End event is missing label input');
+      }
+      if (!endInput.closest('label.end-label-field')) {
+        const label = document.createElement('label');
+        label.className = 'end-label-field';
+        label.textContent = '最後に表示する文字';
+        card.insertBefore(label, endInput);
+        label.appendChild(endInput);
+      }
+      endInput.placeholder = '例：END / おしまい';
+    }
     if (rawType === 'choice') {
       const targets = card.querySelectorAll('.choice-row select');
       if (targets.length === 0) {
@@ -682,10 +699,46 @@
     queueMicrotask(decorate);
   }
 
+  function isKeyboardTextControl(element) {
+    if (element instanceof HTMLTextAreaElement) return true;
+    if (!(element instanceof HTMLInputElement)) return false;
+    return !new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'radio', 'range', 'reset', 'submit']).has(element.type);
+  }
+
+  function focusedEditorTextControl() {
+    const active = document.activeElement;
+    if (!isKeyboardTextControl(active)) return null;
+    if (eventEditor.contains(active) || settingsPane.contains(active) || active === projectHeroTitle) return active;
+    return null;
+  }
+
+  function keepFocusedControlVisible() {
+    const control = focusedEditorTextControl();
+    if (!control) return;
+    control.scrollIntoView({ block: 'center', inline: 'nearest' });
+  }
+
+  function syncKeyboardMode() {
+    const control = focusedEditorTextControl();
+    if (!control) {
+      delete document.body.dataset.simpleKeyboard;
+      return;
+    }
+    document.body.dataset.simpleKeyboard = 'true';
+    requestAnimationFrame(keepFocusedControlVisible);
+  }
+
   openSettings.addEventListener('click', () => setView('settings'));
   closeSettings.addEventListener('click', () => setView('scenes'));
   sceneBack.addEventListener('click', () => setView('scenes'));
   storyTitle.addEventListener('input', syncProjectHero);
+  document.addEventListener('focusin', syncKeyboardMode);
+  document.addEventListener('focusout', () => requestAnimationFrame(syncKeyboardMode));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (document.body.dataset.simpleKeyboard === 'true') requestAnimationFrame(keepFocusedControlVisible);
+    });
+  }
   document.body.dataset.simpleView = 'scenes';
 
   const observer = new MutationObserver(scheduleDecorate);
