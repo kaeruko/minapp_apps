@@ -404,13 +404,20 @@
     return value;
   }
 
+  function sceneTitle(rawId) {
+    const button = Array.from(sceneList.querySelectorAll('.scene-button'))
+      .find((candidate) => sceneId(candidate) === rawId);
+    if (button?.dataset.sceneTitleDefined === '1') return button.dataset.sceneTitle || '';
+    return SAMPLE_SCENE_LABELS[rawId] || '';
+  }
+
   function sceneDisplay(rawId, index) {
-    const label = SAMPLE_SCENE_LABELS[rawId];
+    const label = sceneTitle(rawId);
     return label ? `シーン ${index + 1}　${label}` : `シーン ${index + 1}`;
   }
 
   function sceneOptionDisplay(rawId, index) {
-    return SAMPLE_SCENE_LABELS[rawId] || `シーン ${index + 1}`;
+    return sceneTitle(rawId) || `シーン ${index + 1}`;
   }
 
   function translateSceneOptions(select) {
