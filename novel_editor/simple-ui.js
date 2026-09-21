@@ -585,7 +585,13 @@
       button.className = 'settings-category-button';
       button.dataset.settingsTarget = section;
       button.innerHTML = `<span class="category-icon" aria-hidden="true">${config.icon}</span><span>${config.label}</span><span class="category-arrow" aria-hidden="true">›</span>`;
-      button.addEventListener('click', () => setSettingsSection(section));
+      button.addEventListener('click', () => {
+        if (section === 'characters') {
+          openCharacterSettings();
+          return;
+        }
+        setSettingsSection(section);
+      });
       grid.appendChild(button);
     }
 
@@ -593,14 +599,35 @@
     subnav.insertAdjacentElement('afterend', home);
 
     back.addEventListener('click', () => {
-      if (settingsSection === 'character-detail') setSettingsSection('characters');
-      else setSettingsSection('root');
+      if (settingsSection === 'character-detail') {
+        const cards = characterCards();
+        if (cards.length <= 1) setSettingsSection('root');
+        else setSettingsSection('characters');
+        return;
+      }
+      setSettingsSection('root');
     });
 
     settingsHome = home;
     settingsSubnav = subnav;
     settingsSubnavBack = back;
     settingsSubnavTitle = title;
+  }
+
+  function characterCards() {
+    return Array.from(characterSlot.querySelectorAll('.character-card'))
+      .filter((card) => card instanceof HTMLElement);
+  }
+
+  function openCharacterSettings() {
+    const cards = characterCards();
+    if (cards.length === 1) {
+      const characterId = cards[0].dataset.characterId;
+      if (!characterId) throw new Error('Character card is missing data-character-id');
+      setSettingsSection('character-detail', characterId);
+      return;
+    }
+    setSettingsSection('characters');
   }
 
   function characterCardById(characterId) {
@@ -661,7 +688,7 @@
         setSettingsSection('characters');
         return;
       }
-      for (const characterCard of characterSlot.querySelectorAll('.character-card')) {
+      for (const characterCard of characterCards()) {
         characterCard.dataset.settingsActive =
           characterCard === card ? 'true' : 'false';
       }
@@ -669,7 +696,7 @@
         settingsSubnavTitle.textContent = `キャラクター詳細　${characterDisplayName(selectedCharacterId)}`;
       }
     } else {
-      for (const characterCard of characterSlot.querySelectorAll('.character-card')) {
+      for (const characterCard of characterCards()) {
         delete characterCard.dataset.settingsActive;
       }
     }
