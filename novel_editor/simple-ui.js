@@ -777,6 +777,25 @@
     const copy = 'キャラクターを選ぶと、名前・表情・立ち絵を詳しく編集できます。';
     if (note instanceof HTMLElement && note.textContent !== copy) note.textContent = copy;
 
+    let addAnother = panel.querySelector(':scope > .character-add-another');
+    if (!(addAnother instanceof HTMLButtonElement)) {
+      addAnother = document.createElement('button');
+      addAnother.type = 'button';
+      addAnother.className = 'secondary character-add-another';
+      addAnother.textContent = '＋ 新しいキャラクターを追加';
+      addAnother.addEventListener('click', () => {
+        setSettingsSection('characters');
+        requestAnimationFrame(() => {
+          const create = panel.querySelector('.character-create-form');
+          if (!(create instanceof HTMLElement)) {
+            throw new Error('Character create form is missing');
+          }
+          create.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+      });
+      panel.appendChild(addAnother);
+    }
+
     let selectedFound = false;
     for (const card of panel.querySelectorAll('.character-card')) {
       if (!(card instanceof HTMLElement)) continue;
