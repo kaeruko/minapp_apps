@@ -43,6 +43,20 @@ assert.equal(validateStory(validStory()).content_format, FORMAT);
 
 {
   const story = validStory();
+  story.scenes.start.title = '放課後の教室';
+  assert.equal(validateStory(story).scenes.start.title, '放課後の教室');
+}
+
+{
+  const story = validStory();
+  story.scenes.start.title = '';
+  assert.equal(validateStory(story).scenes.start.title, '');
+}
+
+expectCode((story) => { story.scenes.start.title = 'x'.repeat(101); }, 'limit_exceeded');
+
+{
+  const story = validStory();
   story.scenes.start.events = [{ id: 'jump', type: 'goto', goto: 'finish' }];
   story.scenes.finish = { id: 'finish', events: [{ id: 'finish-end', type: 'end' }] };
   assert.equal(validateStory(story).scenes.start.events[0].type, 'goto');
