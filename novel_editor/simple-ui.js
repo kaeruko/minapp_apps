@@ -437,10 +437,18 @@
   }
 
   function nextSceneId() {
-    const used = new Set(Array.from(sceneList.querySelectorAll('.scene-button')).map(sceneId));
-    for (let index = 1; index <= 999999; index += 1) {
+    const used = Array.from(sceneList.querySelectorAll('.scene-button')).map(sceneId);
+    let maxIndex = 0;
+    for (const value of used) {
+      const match = /^scene_(\d{3,6})$/.exec(value);
+      if (!match) continue;
+      const parsed = Number.parseInt(match[1], 10);
+      if (!Number.isSafeInteger(parsed)) throw new Error(`Invalid generated scene id: ${value}`);
+      maxIndex = Math.max(maxIndex, parsed);
+    }
+    for (let index = maxIndex + 1; index <= 999999; index += 1) {
       const value = `scene_${String(index).padStart(3, '0')}`;
-      if (!used.has(value)) return value;
+      if (!used.includes(value)) return value;
     }
     throw new Error('Could not allocate a scene id');
   }
