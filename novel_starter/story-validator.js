@@ -243,9 +243,12 @@
       requireId(sceneId, `$.scenes.${sceneId}`);
       const path = `$.scenes.${sceneId}`;
       const scene = requireObject(rawScene, path);
-      requireExactKeys(scene, ['id', 'events'], ['id', 'events'], path);
+      requireExactKeys(scene, ['id', 'title', 'events'], ['id', 'events'], path);
       requireId(scene.id, `${path}.id`);
       if (scene.id !== sceneId) fail('scene_id_mismatch', `${path}.id`, `scene key ${sceneId} must equal scene.id ${scene.id}`);
+      if (Object.prototype.hasOwnProperty.call(scene, 'title')) {
+        requireString(scene.title, `${path}.title`, { maxLength: 100 });
+      }
       const events = requireArray(scene.events, `${path}.events`);
       if (events.length === 0) fail('invalid_value', `${path}.events`, 'at least one event is required');
       events.forEach((event, index) => validateEvent(event, `${path}.events[${index}]`, context));
