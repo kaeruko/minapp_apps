@@ -232,6 +232,78 @@
     return button;
   }
 
+  function confirmEditorAction(message, confirmLabel = '削除する') {
+    if (typeof message !== 'string' || message.trim() === '') {
+      throw new TypeError('Confirmation message must be a non-empty string');
+    }
+    if (document.querySelector('.editor-confirm-overlay')) {
+      throw Object.assign(new Error('確認画面がすでに開いています'), {
+        code: 'confirmation_already_open',
+      });
+    }
+
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'editor-confirm-overlay';
+      overlay.setAttribute('role', 'presentation');
+
+      const dialog = document.createElement('section');
+      dialog.className = 'editor-confirm-dialog';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'editor-confirm-title');
+      dialog.setAttribute('aria-describedby', 'editor-confirm-message');
+
+      const title = document.createElement('h2');
+      title.id = 'editor-confirm-title';
+      title.textContent = '確認';
+
+      const body = document.createElement('p');
+      body.id = 'editor-confirm-message';
+      body.textContent = message;
+
+      const actions = document.createElement('div');
+      actions.className = 'editor-confirm-actions';
+
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'secondary';
+      cancel.textContent = 'キャンセル';
+
+      const confirm = document.createElement('button');
+      confirm.type = 'button';
+      confirm.className = 'danger';
+      confirm.textContent = confirmLabel;
+
+      let settled = false;
+      const close = (result) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener('keydown', onKeyDown);
+        overlay.remove();
+        resolve(result);
+      };
+      const onKeyDown = (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        close(false);
+      };
+
+      cancel.addEventListener('click', () => close(false));
+      confirm.addEventListener('click', () => close(true));
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) close(false);
+      });
+      document.addEventListener('keydown', onKeyDown);
+
+      actions.append(cancel, confirm);
+      dialog.append(title, body, actions);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      confirm.focus();
+    });
+  }
+
   function makeSelect(entries, currentValue, ariaLabel, options) {
     const opts = options || {};
     const select = markEditorControl(document.createElement('select'));
@@ -548,9 +620,9 @@
         renderSelectedScene();
       });
 
-      const remove = makeButton('削除', 'mini-button danger', () => {
+      const remove = makeButton('削除', 'mini-button danger', async () => {
         const displayName = scene.title ? `「${scene.title}」` : sceneId;
-        if (!window.confirm(`${displayName} を削除しますか？`)) return;
+        if (!(await confirmEditorAction(`${displayName} を削除しますか？`))) return;
         runMutation(
           () => core.removeScene(workingDocument, sceneId, formatApi.validateStory),
           `シーン ${sceneId} を削除しました。保存してください`,
