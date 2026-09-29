@@ -928,6 +928,26 @@
   }
 
   function renderCharacterEvent(card, event) {
+    if (event.action === 'show') {
+      const characters = characterIds();
+      const characterLabel = document.createElement('label');
+      characterLabel.textContent = 'character';
+      const character = makeSelect(characters, event.character, `${event.id} のcharacter`);
+      character.addEventListener('change', () => {
+        const selected = workingDocument.characters[character.value];
+        if (!selected) {
+          handleUiError(Object.assign(new Error(`character ${character.value} がありません`), { code: 'character_not_found' }));
+          return;
+        }
+        event.character = character.value;
+        event.expression = Object.keys(selected.expressions)[0];
+        markDirty();
+        renderSelectedScene();
+      });
+      characterLabel.appendChild(character);
+      card.appendChild(characterLabel);
+    }
+
     const actionLabel = document.createElement('label');
     actionLabel.textContent = 'action';
     const action = makeSelect(['show', 'hide'], event.action, `${event.id} のcharacter action`);
@@ -957,23 +977,6 @@
     card.appendChild(slotLabel);
 
     if (event.action === 'hide') return;
-    const characters = characterIds();
-    const characterLabel = document.createElement('label');
-    characterLabel.textContent = 'character';
-    const character = makeSelect(characters, event.character, `${event.id} のcharacter`);
-    character.addEventListener('change', () => {
-      const selected = workingDocument.characters[character.value];
-      if (!selected) {
-        handleUiError(Object.assign(new Error(`character ${character.value} がありません`), { code: 'character_not_found' }));
-        return;
-      }
-      event.character = character.value;
-      event.expression = Object.keys(selected.expressions)[0];
-      markDirty();
-      renderSelectedScene();
-    });
-    characterLabel.appendChild(character);
-    card.appendChild(characterLabel);
 
     const expressionLabel = document.createElement('label');
     expressionLabel.textContent = 'expression';
