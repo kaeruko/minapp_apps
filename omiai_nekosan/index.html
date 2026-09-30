@@ -97,9 +97,9 @@
 
     .partner-card {
       position: absolute;
-      right: 12px;
-      bottom: 24px;
-      width: 106px;
+      right: 8px;
+      bottom: 16px;
+      width: 118px;
       z-index: 3;
       text-align: center;
     }
@@ -110,6 +110,17 @@
       background: #fff9;
       font-size: 12px;
       font-weight: 900;
+    }
+    .partner-image {
+      display: block;
+      width: 112px;
+      height: 138px;
+      margin: 0 auto;
+      object-fit: contain;
+      object-position: center bottom;
+      user-select: none;
+      pointer-events: none;
+      filter: drop-shadow(0 6px 2px #6a4a5630);
     }
     .bunny {
       position: relative;
@@ -395,24 +406,14 @@
       </div>
 
       <div class="partner-card" id="partnerCard">
-        <div class="partner-name">今日のお相手<br>うさぎさん</div>
-        <div class="bunny" aria-label="うさぎさん">
-          <div class="bunny-ear left"></div>
-          <div class="bunny-ear right"></div>
-          <div class="bunny-head">
-            <div class="bunny-eye left"></div>
-            <div class="bunny-eye right"></div>
-            <div class="bunny-cheek left"></div>
-            <div class="bunny-cheek right"></div>
-            <div class="bunny-nose"></div>
-          </div>
-        </div>
+        <div class="partner-name">今日のお相手<br><span id="partnerName"></span></div>
+        <img class="partner-image" id="partnerImage" alt="">
       </div>
     </section>
 
     <div class="hint">
-      💌 うさぎさんの好み<br>
-      <strong>ピンクとお花が好き</strong>。メガネはちょっと苦手みたい。
+      💌 <span id="hintPartnerName"></span>の好み<br>
+      <strong id="hintText"></strong>
     </div>
 
     <div class="section-title">ねこさんをコーデしてね</div>
@@ -442,6 +443,45 @@
       { length: 8 },
       (_, index) => `walk_${String(index + 1).padStart(2, "0")}.png`
     );
+
+    const PARTNERS = [
+      {
+        id: "rabbit",
+        name: "うさぎさん",
+        src: "characters/partner_rabbit.png",
+        hint: "ピンクやお花が好き。メガネはちょっと苦手みたい。",
+        likedTags: ["pink", "flower"],
+        dislikedTags: ["glasses"],
+        dislikeLabel: "メガネ"
+      },
+      {
+        id: "bear",
+        name: "くまさん",
+        src: "characters/partner_bear.png",
+        hint: "ぼうしと鈴が好き。メガネはちょっと苦手みたい。",
+        likedTags: ["hat", "bell"],
+        dislikedTags: ["glasses"],
+        dislikeLabel: "メガネ"
+      },
+      {
+        id: "squirrel",
+        name: "りすさん",
+        src: "characters/partner_squirrel.png",
+        hint: "かわいいリボンとハートが好き。ぼうしはちょっと苦手みたい。",
+        likedTags: ["cute", "heart"],
+        dislikedTags: ["hat"],
+        dislikeLabel: "ぼうし"
+      },
+      {
+        id: "fawn",
+        name: "こじかさん",
+        src: "characters/partner_fawn.png",
+        hint: "お花とラベンダー色が好き。鈴はちょっと苦手みたい。",
+        likedTags: ["flower", "lavender"],
+        dislikedTags: ["bell"],
+        dislikeLabel: "鈴"
+      }
+    ];
 
     /*
      * Placement values are percentages of the 280x240 sprite canvas.
@@ -528,6 +568,10 @@
     const choices = document.getElementById("choices");
     const selectionStatus = document.getElementById("selectionStatus");
     const goButton = document.getElementById("goButton");
+    const partnerName = document.getElementById("partnerName");
+    const partnerImage = document.getElementById("partnerImage");
+    const hintPartnerName = document.getElementById("hintPartnerName");
+    const hintText = document.getElementById("hintText");
     const resultOverlay = document.getElementById("resultOverlay");
     const resultIcon = document.getElementById("resultIcon");
     const resultTitle = document.getElementById("resultTitle");
@@ -543,7 +587,8 @@
     };
 
     if (!game || !scene || !catActor || !catFrame || !choices ||
-        !selectionStatus || !goButton || !resultOverlay || !resultIcon ||
+        !selectionStatus || !goButton || !partnerName || !partnerImage ||
+        !hintPartnerName || !hintText || !resultOverlay || !resultIcon ||
         !resultTitle || !resultMessage || !againButton || !fatalError ||
         Object.values(wornElements).some((element) => !element)) {
       throw new Error("Initialization failed: required DOM element is missing.");
@@ -555,7 +600,8 @@
       selected: new Map(),
       animationId: 0,
       frameIndex: 0,
-      lastSpriteChange: 0
+      lastSpriteChange: 0,
+      partnerIndex: 0
     };
 
     function requireAccessory(id) {
@@ -564,6 +610,28 @@
         throw new Error(`Unknown accessory id: ${id}`);
       }
       return accessory;
+    }
+
+    function currentPartner() {
+      const partner = PARTNERS[state.partnerIndex];
+      if (!partner) {
+        throw new Error(`Invalid partner index: ${state.partnerIndex}`);
+      }
+      return partner;
+    }
+
+    function renderPartner() {
+      const partner = currentPartner();
+      partnerName.textContent = partner.name;
+      partnerImage.src = partner.src;
+      partnerImage.alt = partner.name;
+      hintPartnerName.textContent = partner.name;
+      hintText.textContent = partner.hint;
+    }
+
+    function advancePartner() {
+      state.partnerIndex = (state.partnerIndex + 1) % PARTNERS.length;
+      renderPartner();
     }
 
     function preloadImage(src) {
@@ -578,7 +646,8 @@
     async function preloadAssets() {
       const sources = [
         ...WALK_FRAMES,
-        ...ACCESSORIES.map((item) => item.src)
+        ...ACCESSORIES.map((item) => item.src),
+        ...PARTNERS.map((partner) => partner.src)
       ];
       await Promise.all(sources.map(preloadImage));
     }
@@ -700,36 +769,36 @@
         throw new Error("Outfit evaluation requires at least two accessories.");
       }
 
+      const partner = currentPartner();
       let score = 0;
       let hasDislikedItem = false;
 
       for (const accessory of selectedAccessories) {
-        if (accessory.tags.includes("pink")) {
-          score += 1;
+        for (const likedTag of partner.likedTags) {
+          if (accessory.tags.includes(likedTag)) {
+            score += 2;
+          }
         }
-        if (accessory.tags.includes("flower")) {
-          score += 2;
-        }
-        if (accessory.tags.includes("heart")) {
-          score += 1;
-        }
-        if (accessory.tags.includes("glasses")) {
-          score -= 3;
-          hasDislikedItem = true;
+        for (const dislikedTag of partner.dislikedTags) {
+          if (accessory.tags.includes(dislikedTag)) {
+            score -= 4;
+            hasDislikedItem = true;
+          }
         }
       }
 
       return {
-        success: score >= 2 && !hasDislikedItem,
+        success: score >= 4 && !hasDislikedItem,
         score,
-        hasDislikedItem
+        hasDislikedItem,
+        partner
       };
     }
 
     function sceneTravelDistance() {
       const sceneWidth = scene.clientWidth;
       const actorWidth = catActor.offsetWidth;
-      const partnerWidth = 106;
+      const partnerWidth = 118;
       const targetRightGap = 84;
       const maxLeft = sceneWidth - actorWidth - partnerWidth + targetRightGap;
 
@@ -813,13 +882,13 @@
         resultIcon.textContent = "💞";
         resultTitle.textContent = "おみあい成功！";
         resultMessage.textContent =
-          "「そのコーデ、すてき！」\nうさぎさんと なかよくなれたよ♡";
+          `「そのコーデ、すてき！」\n${result.partner.name}と なかよくなれたよ♡`;
       } else {
         resultIcon.textContent = "🐱💭";
         resultTitle.textContent = "今回は好みがちがったみたい";
         resultMessage.textContent = result.hasDislikedItem
-          ? "うさぎさんはメガネがちょっと苦手だったみたい。コーデを変えて、もう一度会いにいこう！"
-          : "ヒントをもう一度見て、うさぎさんの好きなコーデを考えてみよう！";
+          ? `${result.partner.name}は${result.partner.dislikeLabel}がちょっと苦手だったみたい。コーデを変えて、もう一度会いにいこう！`
+          : `ヒントをもう一度見て、${result.partner.name}の好きなコーデを考えてみよう！`;
       }
 
       resultMessage.style.whiteSpace = "pre-line";
@@ -858,6 +927,8 @@
       catFrame.src = WALK_FRAMES[0];
       catActor.style.left = "5px";
       resultOverlay.classList.add("hidden");
+      state.selected.clear();
+      advancePartner();
       renderSelection();
     }
 
@@ -876,6 +947,7 @@
     againButton.addEventListener("click", resetRound);
 
     renderChoices();
+    renderPartner();
     renderSelection();
 
     preloadAssets()
