@@ -278,8 +278,17 @@
           .publish-card h2 { margin: 0; font-size: 20px; }
           .publish-card p { margin: 0; color: #756582; font-size: 13px; line-height: 1.65; }
           .publish-card button { width: 100%; min-height: 52px; }
-          body[data-simple-keyboard="true"] .mobile-project-hero,
+          /* Keep the mobile title editor mounted while it owns focus.
+             Hiding .mobile-project-hero here removes the focused <input>,
+             which immediately blurs Android WebView and prevents the IME from
+             opening. Only the footer needs to leave the keyboard workspace. */
           body[data-simple-keyboard="true"] .editor-footer { display: none !important; }
+          body[data-simple-keyboard="true"] .mobile-project-hero-actions {
+            display: none !important;
+          }
+          body[data-simple-keyboard="true"] .mobile-project-hero {
+            margin-bottom: 0;
+          }
           body[data-simple-keyboard="true"] .pane { min-height: 100dvh; }
         }
       `;
