@@ -390,7 +390,7 @@
         <img class="worn-accessory back hidden" id="backAccessory" alt="">
         <img class="cat-frame" id="catFrame" src="walk_01.png" alt="歩くねこさん">
         <img class="worn-accessory front hidden" id="headAccessory" alt="">
-        <img class="worn-accessory front hidden" id="neckAccessory" alt="">
+        <img class="worn-accessory front hidden" id="chestAccessory" alt="">
         <img class="worn-accessory front hidden" id="faceAccessory" alt="">
       </div>
 
@@ -473,20 +473,43 @@
         placement: { left: 64, top: 9, width: 28 }
       },
       {
-        id: "collar-bell",
-        label: "鈴の首輪",
-        category: "neck",
+        id: "chest-bell",
+        label: "胸元の鈴",
+        category: "chest",
         src: "accessories/neck_collar_bell_pink.png",
         tags: ["pink", "bell"],
-        placement: { left: 54, top: 45, width: 31 }
+        placement: {
+          left: 57,
+          top: 43,
+          width: 27,
+          clipPath: "inset(42% 18% 0 18%)"
+        }
       },
       {
-        id: "collar-heart",
-        label: "ハート首輪",
-        category: "neck",
+        id: "chest-heart",
+        label: "胸元ハート",
+        category: "chest",
         src: "accessories/neck_collar_heart_lavender.png",
         tags: ["heart", "lavender"],
-        placement: { left: 54, top: 45, width: 31 }
+        placement: {
+          left: 58,
+          top: 43,
+          width: 26,
+          clipPath: "inset(42% 18% 0 18%)"
+        }
+      },
+      {
+        id: "chest-lace",
+        label: "レースリボン",
+        category: "chest",
+        src: "accessories/neck_collar_lace_pink.png",
+        tags: ["pink", "cute"],
+        placement: {
+          left: 55,
+          top: 40,
+          width: 30,
+          clipPath: "inset(28% 24% 0 24%)"
+        }
       },
       {
         id: "glasses",
@@ -515,7 +538,7 @@
     const wornElements = {
       back: document.getElementById("backAccessory"),
       head: document.getElementById("headAccessory"),
-      neck: document.getElementById("neckAccessory"),
+      chest: document.getElementById("chestAccessory"),
       face: document.getElementById("faceAccessory")
     };
 
@@ -613,6 +636,7 @@
       element.style.left = `${placement.left}%`;
       element.style.top = `${placement.top}%`;
       element.style.width = `${placement.width}%`;
+      element.style.clipPath = placement.clipPath ?? "none";
     }
 
     function renderWornAccessories() {
@@ -656,18 +680,18 @@
       renderWornAccessories();
 
       const headSelected = state.selected.has("head");
-      const neckSelected = state.selected.has("neck");
+      const chestSelected = state.selected.has("chest");
       const faceSelected = state.selected.has("face");
 
-      if (!headSelected || !neckSelected) {
-        selectionStatus.textContent = "頭と首のアクセサリーを1つずつ選んでね";
+      if (!headSelected || !chestSelected) {
+        selectionStatus.textContent = "頭と胸元のアクセサリーを1つずつ選んでね";
       } else {
         selectionStatus.textContent =
           `コーデ完成♡${faceSelected ? " メガネもつけたよ" : ""}`;
       }
 
       goButton.disabled =
-        !state.ready || state.walking || !headSelected || !neckSelected;
+        !state.ready || state.walking || !headSelected || !chestSelected;
     }
 
     function scoreOutfit() {
@@ -809,8 +833,8 @@
       if (state.walking) {
         return;
       }
-      if (!state.selected.has("head") || !state.selected.has("neck")) {
-        throw new Error("Head and neck accessories must be selected.");
+      if (!state.selected.has("head") || !state.selected.has("chest")) {
+        throw new Error("Head and chest accessories must be selected.");
       }
 
       state.walking = true;
