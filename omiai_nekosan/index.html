@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>おみあい ねこさん</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink: #5a3347;
+      --pink: #f58fb5;
+      --pink-deep: #dc5f93;
+      --lavender: #b89add;
+      --cream: #fffaf2;
+      --panel: #fffdfacc;
+      --shadow: #7f526025;
+    }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, #fff6b9 0 4%, transparent 4.2%),
+        radial-gradient(circle at 88% 13%, #ffd6e7 0 6%, transparent 6.2%),
+        linear-gradient(155deg, #ffe5ef, #f3e8ff 48%, #fff3c8);
+    }
+    body {
+      min-height: 100vh;
+      padding: 10px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+    }
+    button { font: inherit; }
+    .game {
+      position: relative;
+      width: min(100%, 440px);
+      min-height: min(760px, calc(100vh - 20px));
+      padding: 14px 14px 18px;
+      overflow: hidden;
+      border: 4px solid #fff;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 15% 20%, #fff 0 7px, transparent 8px),
+        radial-gradient(circle at 84% 25%, #fff 0 6px, transparent 7px),
+        linear-gradient(#fff9fd 0 46%, #eef7d7 46% 100%);
+      box-shadow: 0 18px 55px #7a52664a;
+    }
+    .title {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(26px, 8vw, 38px);
+      font-weight: 1000;
+      letter-spacing: .04em;
+      color: #d3548a;
+      text-shadow: 0 3px 0 #fff;
+    }
+    .subtitle {
+      margin: 2px 0 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #8a6073;
+    }
+    .scene {
+      position: relative;
+      height: 270px;
+      overflow: hidden;
+      border: 3px solid #f7d5e2;
+      border-radius: 24px;
+      background:
+        radial-gradient(ellipse at 20% 90%, #bee596 0 25%, transparent 25.5%),
+        radial-gradient(ellipse at 75% 95%, #abd981 0 28%, transparent 28.5%),
+        linear-gradient(#dff4ff 0 67%, #dff0b7 67% 100%);
+      box-shadow: inset 0 0 0 3px #fff9;
+    }
+    .cloud {
+      position: absolute;
+      top: 24px;
+      width: 58px;
+      height: 24px;
+      border-radius: 999px;
+      background: #fff;
+      opacity: .88;
+    }
+    .cloud::before, .cloud::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: inherit;
+    }
+    .cloud::before { width: 29px; height: 29px; left: 9px; top: -12px; }
+    .cloud::after { width: 35px; height: 35px; right: 5px; top: -16px; }
+    .cloud.one { left: 28px; }
+    .cloud.two { right: 35px; top: 52px; transform: scale(.72); }
+
+    .partner-card {
+      position: absolute;
+      right: 12px;
+      bottom: 24px;
+      width: 106px;
+      z-index: 3;
+      text-align: center;
+    }
+    .partner-name {
+      margin-bottom: 3px;
+      padding: 4px 5px;
+      border-radius: 999px;
+      background: #fff9;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .bunny {
+      position: relative;
+      width: 86px;
+      height: 105px;
+      margin: 0 auto;
+      filter: drop-shadow(0 6px 2px #6a4a5630);
+    }
+    .bunny-ear {
+      position: absolute;
+      top: 2px;
+      width: 28px;
+      height: 58px;
+      border: 3px solid #7a5263;
+      border-radius: 55% 55% 45% 45%;
+      background: #fff4f6;
+      z-index: 0;
+    }
+    .bunny-ear::after {
+      content: "";
+      position: absolute;
+      inset: 8px 7px 12px;
+      border-radius: 999px;
+      background: #ffc7d8;
+    }
+    .bunny-ear.left { left: 10px; transform: rotate(-9deg); }
+    .bunny-ear.right { right: 10px; transform: rotate(9deg); }
+    .bunny-head {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      width: 74px;
+      height: 72px;
+      border: 3px solid #7a5263;
+      border-radius: 48% 48% 46% 46%;
+      background: #fff8f8;
+      z-index: 1;
+    }
+    .bunny-eye {
+      position: absolute;
+      top: 29px;
+      width: 7px;
+      height: 9px;
+      border-radius: 50%;
+      background: #49303a;
+    }
+    .bunny-eye.left { left: 17px; }
+    .bunny-eye.right { right: 17px; }
+    .bunny-nose {
+      position: absolute;
+      top: 42px;
+      left: 50%;
+      width: 8px;
+      height: 6px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: #ef91ac;
+    }
+    .bunny-cheek {
+      position: absolute;
+      top: 43px;
+      width: 14px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ffc6d4;
+      opacity: .8;
+    }
+    .bunny-cheek.left { left: 7px; }
+    .bunny-cheek.right { right: 7px; }
+
+    .cat-actor {
+      position: absolute;
+      left: 5px;
+      bottom: 18px;
+      width: 196px;
+      height: 168px;
+      z-index: 4;
+      pointer-events: none;
+      transform-origin: bottom center;
+    }
+    .cat-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      filter: drop-shadow(0 6px 2px #6e526030);
+      z-index: 2;
+    }
+    .worn-accessory {
+      position: absolute;
+      height: auto;
+      object-fit: contain;
+      user-select: none;
+      pointer-events: none;
+    }
+    .worn-accessory.back { z-index: 1; }
+    .worn-accessory.front { z-index: 5; }
+
+    .heart-pop {
+      position: absolute;
+      z-index: 20;
+      font-size: 28px;
+      pointer-events: none;
+      animation: floatHeart 1.3s ease-out forwards;
+    }
+    @keyframes floatHeart {
+      0% { opacity: 0; transform: translateY(10px) scale(.6); }
+      18% { opacity: 1; transform: translateY(0) scale(1.15); }
+      100% { opacity: 0; transform: translateY(-90px) scale(1); }
+    }
+
+    .hint {
+      margin: 10px 0;
+      padding: 9px 11px;
+      border: 2px solid #f3c7d8;
+      border-radius: 16px;
+      background: #fffaf6dd;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+    .hint strong { color: #d5578b; }
+
+    .section-title {
+      margin: 7px 2px 6px;
+      font-size: 14px;
+      font-weight: 1000;
+    }
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+    .choice {
+      min-width: 0;
+      padding: 7px 5px 6px;
+      border: 2px solid #ead6e0;
+      border-radius: 16px;
+      background: #fffdfb;
+      color: var(--ink);
+      box-shadow: 0 3px 0 #e4c9d5;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .choice:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #e4c9d5;
+    }
+    .choice.selected {
+      border-color: #e9659b;
+      background: #fff0f6;
+      box-shadow: 0 3px 0 #df73a0, inset 0 0 0 2px #fff;
+    }
+    .choice img {
+      display: block;
+      width: 48px;
+      height: 42px;
+      margin: 0 auto 3px;
+      object-fit: contain;
+    }
+    .choice span {
+      display: block;
+      overflow: hidden;
+      font-size: 11px;
+      font-weight: 900;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .selection-status {
+      min-height: 22px;
+      margin: 8px 0 4px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #7b5967;
+    }
+    .go {
+      display: block;
+      width: 86%;
+      margin: 7px auto 0;
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(#ff9fc1, #ee6c9f);
+      box-shadow: 0 5px 0 #bf4f7c;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 1000;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .go:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      box-shadow: 0 3px 0 #ad8796;
+    }
+    .go:not(:disabled):active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #bf4f7c;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: #76546773;
+      backdrop-filter: blur(4px);
+    }
+    .overlay.hidden { display: none; }
+    .result-card {
+      width: min(92%, 340px);
+      padding: 25px 20px;
+      border: 4px solid #fff;
+      border-radius: 28px;
+      background: #fffaf7;
+      box-shadow: 0 10px 0 #ddb6c7, 0 24px 55px #59404b55;
+      text-align: center;
+    }
+    .result-icon { font-size: 48px; }
+    .result-card h2 {
+      margin: 5px 0 8px;
+      font-size: 26px;
+      color: #d35388;
+    }
+    .result-card p {
+      margin: 0 0 18px;
+      font-weight: 750;
+      line-height: 1.55;
+    }
+    .again {
+      padding: 11px 24px;
+      border: 0;
+      border-radius: 999px;
+      background: #b99adc;
+      box-shadow: 0 5px 0 #876aac;
+      color: white;
+      font-weight: 1000;
+      cursor: pointer;
+    }
+    .fatal {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      background: #fff0f0;
+      color: #8b2635;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: pre-wrap;
+    }
+    .hidden { display: none; }
+
+    @media (max-height: 720px) {
+      body { display: block; padding: 0; }
+      .game { min-height: 100vh; border-radius: 0; border-width: 0; }
+      .scene { height: 230px; }
+      .cat-actor { width: 168px; height: 144px; }
+      .partner-card { transform: scale(.9); transform-origin: bottom right; }
+      .choice img { width: 42px; height: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" id="game">
+    <h1 class="title">おみあい ねこさん</h1>
+    <p class="subtitle">おしゃれして、お相手のところまで とことこ…</p>
+
+    <section class="scene" id="scene" aria-label="おみあい会場">
+      <div class="cloud one" aria-hidden="true"></div>
+      <div class="cloud two" aria-hidden="true"></div>
+
+      <div class="cat-actor" id="catActor" aria-label="ねこさん">
+        <img class="worn-accessory back hidden" id="backAccessory" alt="">
+        <img class="cat-frame" id="catFrame" src="walk_01.png" alt="歩くねこさん">
+        <img class="worn-accessory front hidden" id="headAccessory" alt="">
+        <img class="worn-accessory front hidden" id="neckAccessory" alt="">
+        <img class="worn-accessory front hidden" id="faceAccessory" alt="">
+      </div>
+
+      <div class="partner-card" id="partnerCard">
+        <div class="partner-name">今日のお相手<br>うさぎさん</div>
+        <div class="bunny" aria-label="うさぎさん">
+          <div class="bunny-ear left"></div>
+          <div class="bunny-ear right"></div>
+          <div class="bunny-head">
+            <div class="bunny-eye left"></div>
+            <div class="bunny-eye right"></div>
+            <div class="bunny-cheek left"></div>
+            <div class="bunny-cheek right"></div>
+            <div class="bunny-nose"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="hint">
+      💌 うさぎさんの好み<br>
+      <strong>ピンクとお花が好き</strong>。メガネはちょっと苦手みたい。
+    </div>
+
+    <div class="section-title">ねこさんをコーデしてね</div>
+    <div class="choices" id="choices"></div>
+    <div class="selection-status" id="selectionStatus"></div>
+
+    <button class="go" id="goButton" type="button" disabled>
+      ▶ おみあいへ！
+    </button>
+
+    <div class="fatal hidden" id="fatalError" role="alert"></div>
+
+    <section class="overlay hidden" id="resultOverlay">
+      <div class="result-card">
+        <div class="result-icon" id="resultIcon"></div>
+        <h2 id="resultTitle"></h2>
+        <p id="resultMessage"></p>
+        <button class="again" id="againButton" type="button">もういちど</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const WALK_FRAMES = Array.from(
+      { length: 8 },
+      (_, index) => `walk_${String(index + 1).padStart(2, "0")}.png`
+    );
+
+    /*
+     * Placement values are percentages of the 280x240 sprite canvas.
+     * This keeps accessories attached when the actor is scaled responsively.
+     */
+    const ACCESSORIES = [
+      {
+        id: "ribbon-pink",
+        label: "ピンクリボン",
+        category: "head",
+        src: "accessories/head_ribbon_pink.png",
+        tags: ["pink", "cute"],
+        placement: { left: 53, top: -2, width: 34 }
+      },
+      {
+        id: "beret-pink",
+        label: "ベレー帽",
+        category: "head",
+        src: "accessories/head_beret_pink.png",
+        tags: ["pink", "hat"],
+        placement: { left: 51, top: -5, width: 39 }
+      },
+      {
+        id: "flower-sakura",
+        label: "お花",
+        category: "head",
+        src: "accessories/head_flower_sakura.png",
+        tags: ["pink", "flower"],
+        placement: { left: 64, top: 9, width: 28 }
+      },
+      {
+        id: "collar-bell",
+        label: "鈴の首輪",
+        category: "neck",
+        src: "accessories/neck_collar_bell_pink.png",
+        tags: ["pink", "bell"],
+        placement: { left: 54, top: 45, width: 31 }
+      },
+      {
+        id: "collar-heart",
+        label: "ハート首輪",
+        category: "neck",
+        src: "accessories/neck_collar_heart_lavender.png",
+        tags: ["heart", "lavender"],
+        placement: { left: 54, top: 45, width: 31 }
+      },
+      {
+        id: "glasses",
+        label: "まるメガネ",
+        category: "face",
+        src: "accessories/face_glasses_round_pink.png",
+        tags: ["glasses"],
+        placement: { left: 64, top: 27, width: 28 }
+      }
+    ];
+
+    const game = document.getElementById("game");
+    const scene = document.getElementById("scene");
+    const catActor = document.getElementById("catActor");
+    const catFrame = document.getElementById("catFrame");
+    const choices = document.getElementById("choices");
+    const selectionStatus = document.getElementById("selectionStatus");
+    const goButton = document.getElementById("goButton");
+    const resultOverlay = document.getElementById("resultOverlay");
+    const resultIcon = document.getElementById("resultIcon");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultMessage = document.getElementById("resultMessage");
+    const againButton = document.getElementById("againButton");
+    const fatalError = document.getElementById("fatalError");
+
+    const wornElements = {
+      back: document.getElementById("backAccessory"),
+      head: document.getElementById("headAccessory"),
+      neck: document.getElementById("neckAccessory"),
+      face: document.getElementById("faceAccessory")
+    };
+
+    if (!game || !scene || !catActor || !catFrame || !choices ||
+        !selectionStatus || !goButton || !resultOverlay || !resultIcon ||
+        !resultTitle || !resultMessage || !againButton || !fatalError ||
+        Object.values(wornElements).some((element) => !element)) {
+      throw new Error("Initialization failed: required DOM element is missing.");
+    }
+
+    const state = {
+      ready: false,
+      walking: false,
+      selected: new Map(),
+      animationId: 0,
+      frameIndex: 0,
+      lastSpriteChange: 0
+    };
+
+    function requireAccessory(id) {
+      const accessory = ACCESSORIES.find((item) => item.id === id);
+      if (!accessory) {
+        throw new Error(`Unknown accessory id: ${id}`);
+      }
+      return accessory;
+    }
+
+    function preloadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(src);
+        image.onerror = () => reject(new Error(`Image asset failed to load: ${src}`));
+        image.src = src;
+      });
+    }
+
+    async function preloadAssets() {
+      const sources = [
+        ...WALK_FRAMES,
+        ...ACCESSORIES.map((item) => item.src)
+      ];
+      await Promise.all(sources.map(preloadImage));
+    }
+
+    function renderChoices() {
+      choices.replaceChildren();
+
+      for (const accessory of ACCESSORIES) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "choice";
+        button.dataset.accessoryId = accessory.id;
+        button.setAttribute("aria-pressed", "false");
+
+        const image = document.createElement("img");
+        image.src = accessory.src;
+        image.alt = "";
+
+        const label = document.createElement("span");
+        label.textContent = accessory.label;
+
+        button.append(image, label);
+        button.addEventListener("click", () => toggleAccessory(accessory.id));
+        choices.appendChild(button);
+      }
+    }
+
+    function toggleAccessory(id) {
+      if (!state.ready || state.walking) {
+        return;
+      }
+
+      const accessory = requireAccessory(id);
+      const currentId = state.selected.get(accessory.category);
+
+      if (currentId === id) {
+        state.selected.delete(accessory.category);
+      } else {
+        state.selected.set(accessory.category, id);
+      }
+
+      renderSelection();
+    }
+
+    function applyPlacement(element, accessory) {
+      const placement = accessory.placement;
+      for (const key of ["left", "top", "width"]) {
+        if (!Number.isFinite(placement[key])) {
+          throw new TypeError(
+            `Accessory placement must be finite: ${accessory.id}.${key}`
+          );
+        }
+      }
+
+      element.style.left = `${placement.left}%`;
+      element.style.top = `${placement.top}%`;
+      element.style.width = `${placement.width}%`;
+    }
+
+    function renderWornAccessories() {
+      for (const [category, element] of Object.entries(wornElements)) {
+        const selectedId = state.selected.get(category);
+
+        if (!selectedId) {
+          element.classList.add("hidden");
+          element.removeAttribute("src");
+          continue;
+        }
+
+        const accessory = requireAccessory(selectedId);
+        if (accessory.category !== category) {
+          throw new Error(
+            `Accessory category mismatch: expected ${category}, got ${accessory.category}`
+          );
+        }
+
+        element.src = accessory.src;
+        element.alt = accessory.label;
+        applyPlacement(element, accessory);
+        element.classList.remove("hidden");
+      }
+    }
+
+    function renderSelection() {
+      const buttons = choices.querySelectorAll(".choice");
+      for (const button of buttons) {
+        const id = button.dataset.accessoryId;
+        if (!id) {
+          throw new Error("Choice button is missing accessory id.");
+        }
+        const accessory = requireAccessory(id);
+        const selected = state.selected.get(accessory.category) === id;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+        button.disabled = state.walking;
+      }
+
+      renderWornAccessories();
+
+      const headSelected = state.selected.has("head");
+      const neckSelected = state.selected.has("neck");
+      const faceSelected = state.selected.has("face");
+
+      if (!headSelected || !neckSelected) {
+        selectionStatus.textContent = "頭と首のアクセサリーを1つずつ選んでね";
+      } else {
+        selectionStatus.textContent =
+          `コーデ完成♡${faceSelected ? " メガネもつけたよ" : ""}`;
+      }
+
+      goButton.disabled =
+        !state.ready || state.walking || !headSelected || !neckSelected;
+    }
+
+    function scoreOutfit() {
+      const selectedAccessories = [...state.selected.values()].map(requireAccessory);
+      if (selectedAccessories.length < 2) {
+        throw new Error("Outfit evaluation requires at least two accessories.");
+      }
+
+      let score = 0;
+      let hasDislikedItem = false;
+
+      for (const accessory of selectedAccessories) {
+        if (accessory.tags.includes("pink")) {
+          score += 1;
+        }
+        if (accessory.tags.includes("flower")) {
+          score += 2;
+        }
+        if (accessory.tags.includes("heart")) {
+          score += 1;
+        }
+        if (accessory.tags.includes("glasses")) {
+          score -= 3;
+          hasDislikedItem = true;
+        }
+      }
+
+      return {
+        success: score >= 2 && !hasDislikedItem,
+        score,
+        hasDislikedItem
+      };
+    }
+
+    function sceneTravelDistance() {
+      const sceneWidth = scene.clientWidth;
+      const actorWidth = catActor.offsetWidth;
+      const partnerWidth = 106;
+      const targetRightGap = 84;
+      const maxLeft = sceneWidth - actorWidth - partnerWidth + targetRightGap;
+
+      if (!Number.isFinite(maxLeft) || maxLeft <= 0) {
+        throw new Error(
+          `Scene is too narrow for walking animation: ${sceneWidth}px`
+        );
+      }
+
+      return Math.max(5, maxLeft);
+    }
+
+    function animateWalk() {
+      return new Promise((resolve, reject) => {
+        const durationMs = 2700;
+        const spriteIntervalMs = 92;
+        const startLeft = 5;
+        const endLeft = sceneTravelDistance();
+        let startTime = null;
+
+        function step(timestamp) {
+          try {
+            if (!Number.isFinite(timestamp)) {
+              throw new TypeError(`Invalid animation timestamp: ${timestamp}`);
+            }
+
+            if (startTime === null) {
+              startTime = timestamp;
+              state.lastSpriteChange = timestamp;
+            }
+
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(1, elapsed / durationMs);
+            const eased = 1 - Math.pow(1 - progress, 2);
+            const left = startLeft + (endLeft - startLeft) * eased;
+
+            catActor.style.left = `${left}px`;
+
+            if (timestamp - state.lastSpriteChange >= spriteIntervalMs) {
+              state.frameIndex = (state.frameIndex + 1) % WALK_FRAMES.length;
+              catFrame.src = WALK_FRAMES[state.frameIndex];
+              state.lastSpriteChange = timestamp;
+            }
+
+            if (progress >= 1) {
+              state.animationId = 0;
+              state.frameIndex = 0;
+              catFrame.src = WALK_FRAMES[0];
+              resolve();
+              return;
+            }
+
+            state.animationId = requestAnimationFrame(step);
+          } catch (error) {
+            state.animationId = 0;
+            reject(error);
+          }
+        }
+
+        state.animationId = requestAnimationFrame(step);
+      });
+    }
+
+    function popHearts() {
+      const icons = ["💗", "💕", "💖", "🌸"];
+      for (let i = 0; i < 8; i += 1) {
+        const heart = document.createElement("div");
+        heart.className = "heart-pop";
+        heart.textContent = icons[i % icons.length];
+        heart.style.left = `${48 + Math.random() * 36}%`;
+        heart.style.top = `${42 + Math.random() * 25}%`;
+        heart.style.animationDelay = `${i * 80}ms`;
+        scene.appendChild(heart);
+        window.setTimeout(() => heart.remove(), 1900);
+      }
+    }
+
+    function showResult(result) {
+      if (result.success) {
+        popHearts();
+        resultIcon.textContent = "💞";
+        resultTitle.textContent = "おみあい成功！";
+        resultMessage.textContent =
+          "「そのコーデ、すてき！」\nうさぎさんと なかよくなれたよ♡";
+      } else {
+        resultIcon.textContent = "🐱💭";
+        resultTitle.textContent = "今回は好みがちがったみたい";
+        resultMessage.textContent = result.hasDislikedItem
+          ? "うさぎさんはメガネがちょっと苦手だったみたい。コーデを変えて、もう一度会いにいこう！"
+          : "ヒントをもう一度見て、うさぎさんの好きなコーデを考えてみよう！";
+      }
+
+      resultMessage.style.whiteSpace = "pre-line";
+      window.setTimeout(() => resultOverlay.classList.remove("hidden"), 550);
+    }
+
+    async function startMeeting() {
+      if (!state.ready) {
+        throw new Error("Game is not ready.");
+      }
+      if (state.walking) {
+        return;
+      }
+      if (!state.selected.has("head") || !state.selected.has("neck")) {
+        throw new Error("Head and neck accessories must be selected.");
+      }
+
+      state.walking = true;
+      renderSelection();
+
+      try {
+        const result = scoreOutfit();
+        await animateWalk();
+        showResult(result);
+      } finally {
+        state.walking = false;
+        renderSelection();
+      }
+    }
+
+    function resetRound() {
+      cancelAnimationFrame(state.animationId);
+      state.animationId = 0;
+      state.walking = false;
+      state.frameIndex = 0;
+      catFrame.src = WALK_FRAMES[0];
+      catActor.style.left = "5px";
+      resultOverlay.classList.add("hidden");
+      renderSelection();
+    }
+
+    function showFatal(error) {
+      state.ready = false;
+      state.walking = false;
+      goButton.disabled = true;
+      fatalError.textContent =
+        `ゲームを準備できませんでした。\n${error instanceof Error ? error.stack ?? error.message : String(error)}`;
+      fatalError.classList.remove("hidden");
+    }
+
+    goButton.addEventListener("click", () => {
+      startMeeting().catch(showFatal);
+    });
+    againButton.addEventListener("click", resetRound);
+
+    renderChoices();
+    renderSelection();
+
+    preloadAssets()
+      .then(() => {
+        state.ready = true;
+        renderSelection();
+      })
+      .catch(showFatal);
+  </script>
+</body>
+</html>
