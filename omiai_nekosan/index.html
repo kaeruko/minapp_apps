@@ -402,7 +402,6 @@
         <img class="cat-frame" id="catFrame" src="walk_01.png" alt="歩くねこさん">
         <img class="worn-accessory front hidden" id="headAccessory" alt="">
         <img class="worn-accessory front hidden" id="chestAccessory" alt="">
-        <img class="worn-accessory front hidden" id="faceAccessory" alt="">
       </div>
 
       <div class="partner-card" id="partnerCard">
@@ -449,19 +448,19 @@
         id: "rabbit",
         name: "うさぎさん",
         src: "characters/partner_rabbit.png",
-        hint: "ピンクやお花が好き。メガネはちょっと苦手みたい。",
+        hint: "ピンクやお花が好き。コウモリ羽はちょっと苦手みたい。",
         likedTags: ["pink", "flower"],
-        dislikedTags: ["glasses"],
-        dislikeLabel: "メガネ"
+        dislikedTags: ["cool"],
+        dislikeLabel: "コウモリ羽"
       },
       {
         id: "bear",
         name: "くまさん",
         src: "characters/partner_bear.png",
-        hint: "ぼうしと鈴が好き。メガネはちょっと苦手みたい。",
+        hint: "ぼうしと鈴が好き。コウモリ羽はちょっと苦手みたい。",
         likedTags: ["hat", "bell"],
-        dislikedTags: ["glasses"],
-        dislikeLabel: "メガネ"
+        dislikedTags: ["cool"],
+        dislikeLabel: "コウモリ羽"
       },
       {
         id: "squirrel",
@@ -476,7 +475,7 @@
         id: "fawn",
         name: "こじかさん",
         src: "characters/partner_fawn.png",
-        hint: "お花とラベンダー色が好き。鈴はちょっと苦手みたい。",
+        hint: "お花とラベンダー色、ちょうちょが好き。鈴はちょっと苦手みたい。",
         likedTags: ["flower", "lavender"],
         dislikedTags: ["bell"],
         dislikeLabel: "鈴"
@@ -552,12 +551,28 @@
         }
       },
       {
-        id: "glasses",
-        label: "まるメガネ",
-        category: "face",
-        src: "accessories/face_glasses_round_pink.png",
-        tags: ["glasses"],
-        placement: { left: 58, top: 28, width: 31 }
+        id: "back-wings",
+        label: "白い羽",
+        category: "back",
+        src: "accessories/back_wings_white.png",
+        tags: ["angel", "cute"],
+        placement: { left: 42, top: 24, width: 36 }
+      },
+      {
+        id: "back-butterfly",
+        label: "ちょうちょ",
+        category: "back",
+        src: "accessories/back_butterfly_lavender.png",
+        tags: ["lavender", "cute"],
+        placement: { left: 47, top: 29, width: 24 }
+      },
+      {
+        id: "back-bat",
+        label: "コウモリ羽",
+        category: "back",
+        src: "accessories/back_bat_wings_purple.png",
+        tags: ["purple", "cool"],
+        placement: { left: 40, top: 23, width: 40 }
       }
     ];
 
@@ -582,8 +597,7 @@
     const wornElements = {
       back: document.getElementById("backAccessory"),
       head: document.getElementById("headAccessory"),
-      chest: document.getElementById("chestAccessory"),
-      face: document.getElementById("faceAccessory")
+      chest: document.getElementById("chestAccessory")
     };
 
     if (!game || !scene || !catActor || !catFrame || !choices ||
@@ -750,13 +764,13 @@
 
       const headSelected = state.selected.has("head");
       const chestSelected = state.selected.has("chest");
-      const faceSelected = state.selected.has("face");
+      const backSelected = state.selected.has("back");
 
       if (!headSelected || !chestSelected) {
         selectionStatus.textContent = "頭と胸元のアクセサリーを1つずつ選んでね";
       } else {
         selectionStatus.textContent =
-          `コーデ完成♡${faceSelected ? " メガネもつけたよ" : ""}`;
+          `コーデ完成♡${backSelected ? " 背中のおしゃれもつけたよ" : ""}`;
       }
 
       goButton.disabled =
