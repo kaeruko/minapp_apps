@@ -14,5 +14,6 @@
 - `novel_starter/`
 - `sing_along/` - 「うたってみよう」BGM付き録音アプリ
 - `minappchi/` - 「みんあぷっち」シンプル育成アプリ
+- `coordinate_book/` - 「わたしのコーデ帳」着せ替え＋コーデ日記アプリ
 
 ビルトインとして本体へ同梱するアプリは `kaeruko/minapp` 側で別途管理します。このリポジトリ全体を submodule として本体へ組み込む前提にはしません。
