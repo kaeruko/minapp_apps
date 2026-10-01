@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>わたしのコーデ帳</title>
+  <style>
+    :root {
+      font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+      color: #554954;
+      background: #fff9fb;
+      --rose: #d97996;
+      --rose-deep: #b95f7d;
+      --lavender: #8d80aa;
+      --line: #eadde3;
+      --panel: #fffdfd;
+      --shadow: #75566b1e;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background:
+        radial-gradient(circle at 14% 7%, #fff 0 4%, transparent 4.3%),
+        radial-gradient(circle at 88% 13%, #fff 0 5%, transparent 5.3%),
+        linear-gradient(165deg, #fbe8ef 0%, #f0ebf7 47%, #f7f0e7 100%);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; opacity: .52; }
+    .app {
+      width: min(100%, 500px);
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 14px max(26px, env(safe-area-inset-bottom));
+    }
+    header { text-align: center; margin-bottom: 12px; }
+    h1 {
+      margin: 0;
+      color: #7b667d;
+      font-family: Georgia, "Yu Mincho", serif;
+      font-size: 31px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .subtitle {
+      margin: 6px 0 0;
+      color: #9b8794;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .panel {
+      border: 2px solid #fff;
+      border-radius: 25px;
+      background: #fffdfde8;
+      box-shadow: 0 10px 28px var(--shadow);
+    }
+    .stage {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, #fbf7f7 0 69%, #e8ded7 69% 70%, #f4ede7 70% 100%);
+    }
+    .stage::before {
+      content: "";
+      position: absolute;
+      left: 20px;
+      top: 24px;
+      width: 70px;
+      height: 92px;
+      border: 7px solid #efe2dc;
+      background: linear-gradient(#e9d9dd 0 48%, #f6e7c9 48% 52%, #dde8df 52%);
+      box-shadow: inset 0 0 0 4px #fff;
+    }
+    .stage::after {
+      content: "today's look";
+      position: absolute;
+      right: 18px;
+      top: 25px;
+      color: #b0959e;
+      font-family: Georgia, serif;
+      font-size: 12px;
+      font-style: italic;
+      letter-spacing: .08em;
+    }
+    .hanger {
+      position: absolute;
+      right: 26px;
+      bottom: 31px;
+      width: 64px;
+      height: 106px;
+      border-left: 4px solid #c8b6b1;
+      border-bottom: 4px solid #c8b6b1;
+      border-radius: 0 0 0 3px;
+      opacity: .75;
+    }
+    .hanger::before, .hanger::after {
+      content: "";
+      position: absolute;
+      top: 28px;
+      width: 39px;
+      height: 3px;
+      background: #c8b6b1;
+      transform-origin: right center;
+    }
+    .hanger::before { left: -5px; transform: rotate(-28deg); }
+    .hanger::after { left: 24px; transform: rotate(28deg); }
+    .avatar {
+      position: absolute;
+      left: 50%;
+      top: 29px;
+      width: 210px;
+      height: 315px;
+      transform: translateX(-50%);
+    }
+    .head {
+      position: absolute;
+      left: 78px;
+      top: 16px;
+      width: 58px;
+      height: 67px;
+      border-radius: 48% 48% 43% 43%;
+      background: #f2d8c9;
+      z-index: 2;
+    }
+    .hair {
+      position: absolute;
+      left: 68px;
+      top: 5px;
+      width: 79px;
+      height: 93px;
+      border-radius: 48% 48% 42% 42%;
+      background: #4e403e;
+      z-index: 1;
+    }
+    .hair::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      bottom: -24px;
+      width: 58px;
+      height: 60px;
+      border-radius: 0 0 46% 46%;
+      background: #4e403e;
+    }
+    .neck {
+      position: absolute;
+      left: 96px;
+      top: 76px;
+      width: 23px;
+      height: 26px;
+      border-radius: 8px;
+      background: #f2d8c9;
+      z-index: 2;
+    }
+    .arm {
+      position: absolute;
+      top: 108px;
+      width: 25px;
+      height: 119px;
+      border-radius: 18px;
+      background: #f2d8c9;
+      z-index: 1;
+    }
+    .arm.left { left: 46px; transform: rotate(5deg); }
+    .arm.right { right: 42px; transform: rotate(-5deg); }
+    .leg {
+      position: absolute;
+      top: 211px;
+      width: 28px;
+      height: 84px;
+      border-radius: 0 0 14px 14px;
+      background: #f2d8c9;
+      z-index: 1;
+    }
+    .leg.left { left: 77px; }
+    .leg.right { right: 76px; }
+    .top-piece, .bottom-piece, .outer-piece, .shoe, .bag-piece {
+      position: absolute;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .top-piece {
+      left: 61px;
+      top: 92px;
+      width: 94px;
+      height: 101px;
+      border-radius: 20px 20px 10px 10px;
+      z-index: 4;
+      box-shadow: inset 0 0 0 2px #ffffff6b;
+    }
+    .top-piece::before, .top-piece::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      width: 33px;
+      height: 72px;
+      border-radius: 16px;
+      background: inherit;
+      z-index: -1;
+    }
+    .top-piece::before { left: -20px; transform: rotate(7deg); }
+    .top-piece::after { right: -20px; transform: rotate(-7deg); }
+    .top-piece.short::before, .top-piece.short::after { height: 40px; }
+    .top-piece.cami::before, .top-piece.cami::after { display: none; }
+    .top-piece.cami { width: 72px; left: 72px; border-radius: 15px 15px 9px 9px; }
+    .bottom-piece {
+      left: 67px;
+      top: 183px;
+      width: 82px;
+      height: 86px;
+      z-index: 3;
+    }
+    .bottom-piece.skirt {
+      clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
+      border-radius: 7px 7px 15px 15px;
+    }
+    .bottom-piece.long-skirt {
+      height: 111px;
+      clip-path: polygon(16% 0, 84% 0, 100% 100%, 0 100%);
+      border-radius: 7px 7px 18px 18px;
+    }
+    .bottom-piece.pants {
+      height: 117px;
+      background: transparent !important;
+    }
+    .bottom-piece.pants::before, .bottom-piece.pants::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 39px;
+      height: 117px;
+      border-radius: 7px 7px 12px 12px;
+      background: var(--bottom-color);
+    }
+    .bottom-piece.pants::before { left: 1px; transform: rotate(1deg); }
+    .bottom-piece.pants::after { right: 1px; transform: rotate(-1deg); }
+    .outer-piece {
+      left: 52px;
+      top: 94px;
+      width: 112px;
+      height: 135px;
+      border: 7px solid transparent;
+      border-top-width: 4px;
+      border-radius: 24px 24px 13px 13px;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .outer-piece.none { display: none; }
+    .outer-piece::before, .outer-piece::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      width: 19px;
+      height: 98px;
+      border-radius: 12px;
+      background: var(--outer-color);
+    }
+    .outer-piece::before { left: -21px; transform: rotate(5deg); }
+    .outer-piece::after { right: -21px; transform: rotate(-5deg); }
+    .shoe {
+      top: 286px;
+      width: 44px;
+      height: 18px;
+      border-radius: 13px 13px 8px 8px;
+      z-index: 6;
+    }
+    .shoe.left { left: 60px; }
+    .shoe.right { right: 59px; }
+    .bag-piece {
+      right: 27px;
+      top: 146px;
+      width: 50px;
+      height: 48px;
+      border: 4px solid transparent;
+      border-radius: 11px 11px 15px 15px;
+      z-index: 8;
+    }
+    .bag-piece.none { display: none; }
+    .bag-piece::before {
+      content: "";
+      position: absolute;
+      left: 9px;
+      top: -17px;
+      width: 24px;
+      height: 20px;
+      border: 4px solid var(--bag-color);
+      border-bottom: 0;
+      border-radius: 16px 16px 0 0;
+    }
+    .look-caption {
+      position: absolute;
+      left: 18px;
+      bottom: 16px;
+      max-width: 145px;
+      color: #88737d;
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+
+    .controls { margin-top: 12px; padding: 14px; }
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 8px;
+      color: #6f5a68;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .section-title small { color: #ae98a3; font-size: 10px; font-weight: 700; }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 1px 0 8px;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      min-height: 37px;
+      padding: 7px 12px;
+      border: 1px solid #e4d6dc;
+      border-radius: 999px;
+      color: #806c77;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .tab.active {
+      border-color: #d9a3b5;
+      color: #9f5870;
+      background: #fbeaf0;
+    }
+    .items {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .item {
+      min-width: 0;
+      min-height: 77px;
+      padding: 7px 4px 6px;
+      border: 2px solid #eee4e7;
+      border-radius: 16px;
+      color: #71616a;
+      background: #fff;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .item.selected {
+      border-color: #d58aa3;
+      background: #fff6f9;
+      box-shadow: 0 0 0 2px #f8dce6 inset;
+    }
+    .swatch {
+      display: block;
+      width: 35px;
+      height: 35px;
+      margin: 0 auto 5px;
+      border: 3px solid #fff;
+      border-radius: 11px;
+      box-shadow: 0 2px 7px #60485920;
+    }
+    .swatch.none {
+      display: grid;
+      place-items: center;
+      background: #f4eff1 !important;
+      color: #9e8d95;
+      font-size: 17px;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .action {
+      min-height: 44px;
+      border: 0;
+      border-radius: 15px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .shuffle { color: #6e6377; background: #eee9f5; }
+    .save { color: #fff; background: linear-gradient(135deg, #cf7896, #b97091); }
+    .memo-wrap { margin-top: 11px; }
+    .memo {
+      width: 100%;
+      min-height: 42px;
+      border: 1.5px solid #e6d9df;
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: #61535d;
+      background: #fff;
+      outline: none;
+      font-size: 12px;
+    }
+    .memo:focus { border-color: #cf91a6; box-shadow: 0 0 0 3px #f5dce5; }
+    .status {
+      min-height: 20px;
+      margin: 9px 2px 0;
+      color: #9b8790;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .status.error {
+      color: #a34860;
+      background: #fff0f4;
+      border-radius: 10px;
+      padding: 5px 8px;
+    }
+
+    .diary { margin-top: 12px; padding: 14px; }
+    .diary-empty {
+      padding: 19px 12px;
+      border: 1px dashed #dfcfd6;
+      border-radius: 17px;
+      color: #aa969f;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .entries { display: grid; gap: 8px; }
+    .entry {
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr) 31px;
+      gap: 10px;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid #eadde2;
+      border-radius: 17px;
+      background: #fff;
+    }
+    .entry-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      width: 62px;
+      height: 62px;
+      padding: 7px;
+      border-radius: 15px;
+      background: #faf4f6;
+    }
+    .entry-preview span { border-radius: 5px; }
+    .entry-text { min-width: 0; }
+    .entry-date { color: #705f68; font-size: 12px; font-weight: 900; }
+    .entry-note {
+      margin-top: 3px;
+      overflow: hidden;
+      color: #9b8892;
+      font-size: 10px;
+      line-height: 1.45;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .delete {
+      width: 31px;
+      height: 31px;
+      border: 0;
+      border-radius: 50%;
+      color: #aa8794;
+      background: #f7edf1;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .footer-note {
+      margin: 11px 4px 0;
+      color: #b09da6;
+      font-size: 9px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>わたしのコーデ帳</h1>
+      <p class="subtitle">すきな服をあわせて、今日の「かわいい」をのこそう。</p>
+    </header>
+
+    <section class="panel stage" aria-label="コーディネートプレビュー">
+      <div class="hanger" aria-hidden="true"></div>
+      <div class="avatar" aria-hidden="true">
+        <div class="hair"></div>
+        <div class="head"></div>
+        <div class="neck"></div>
+        <div class="arm left"></div>
+        <div class="arm right"></div>
+        <div class="leg left"></div>
+        <div class="leg right"></div>
+        <div id="top-piece" class="top-piece"></div>
+        <div id="bottom-piece" class="bottom-piece"></div>
+        <div id="outer-piece" class="outer-piece"></div>
+        <div id="shoe-left" class="shoe left"></div>
+        <div id="shoe-right" class="shoe right"></div>
+        <div id="bag-piece" class="bag-piece"></div>
+      </div>
+      <div id="look-caption" class="look-caption"></div>
+    </section>
+
+    <section class="panel controls">
+      <div class="section-title">
+        <span>クローゼット</span>
+        <small>タップして着せかえ</small>
+      </div>
+      <div id="tabs" class="tabs" role="tablist" aria-label="服のカテゴリ"></div>
+      <div id="items" class="items" aria-live="polite"></div>
+
+      <div class="memo-wrap">
+        <input id="memo" class="memo" type="text" maxlength="80"
+               placeholder="メモ：放課後カフェ、友だちと映画…" aria-label="コーデのメモ">
+      </div>
+
+      <div class="actions">
+        <button id="shuffle" class="action shuffle" disabled>♢ おまかせコーデ</button>
+        <button id="save" class="action save" disabled>♡ 今日のコーデを保存</button>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite">クローゼットを準備しています…</div>
+    </section>
+
+    <section class="panel diary">
+      <div class="section-title">
+        <span>コーデ日記</span>
+        <small id="entry-count">0 looks</small>
+      </div>
+      <div id="entries" class="entries"></div>
+    </section>
+    <p class="footer-note">保存したコーデは、みんアプのあなた専用データに記録されます。</p>
+  </main>
+
+  <script>
+    'use strict';
+
+    const SAVE_KEY = 'coordinate_book_state_v1';
+    const STATE_VERSION = 1;
+    const CATEGORIES = ['top', 'bottom', 'outer', 'shoes', 'bag'];
+    const CATEGORY_LABELS = {
+      top: 'トップス',
+      bottom: 'ボトムス',
+      outer: '羽織り',
+      shoes: 'シューズ',
+      bag: 'バッグ',
+    };
+    const WARDROBE = {
+      top: [
+        { id: 'cream-knit', label: 'ミルクニット', color: '#efe5d4', shape: '' },
+        { id: 'dusty-rose', label: 'ローズT', color: '#d8a2ad', shape: 'short' },
+        { id: 'navy-rib', label: 'ネイビーリブ', color: '#586078', shape: '' },
+        { id: 'sage-cami', label: 'セージキャミ', color: '#9daf9b', shape: 'cami' },
+      ],
+      bottom: [
+        { id: 'denim-skirt', label: 'デニムミニ', color: '#70849a', shape: 'skirt' },
+        { id: 'charcoal-pants', label: 'ワイドパンツ', color: '#5e5c62', shape: 'pants' },
+        { id: 'beige-long', label: 'ロングスカート', color: '#c8b8a2', shape: 'long-skirt' },
+        { id: 'pink-skirt', label: 'ピンクスカート', color: '#d9aeb8', shape: 'skirt' },
+      ],
+      outer: [
+        { id: 'none', label: 'なし', color: '#f4eff1', shape: 'none' },
+        { id: 'ivory-cardigan', label: 'カーディガン', color: '#e9ded0', shape: '' },
+        { id: 'denim-jacket', label: 'デニム羽織り', color: '#74889c', shape: '' },
+        { id: 'mauve-jacket', label: 'モーヴJK', color: '#a78696', shape: '' },
+      ],
+      shoes: [
+        { id: 'brown-loafer', label: 'ローファー', color: '#72594f', shape: '' },
+        { id: 'white-sneaker', label: '白スニーカー', color: '#ebe9e5', shape: '' },
+        { id: 'black-flat', label: '黒フラット', color: '#49464c', shape: '' },
+        { id: 'pink-sandal', label: 'ピンクサンダル', color: '#c88d9d', shape: '' },
+      ],
+      bag: [
+        { id: 'none', label: 'なし', color: '#f4eff1', shape: 'none' },
+        { id: 'brown-mini', label: 'ブラウンミニ', color: '#876c5f', shape: '' },
+        { id: 'black-shoulder', label: '黒ショルダー', color: '#514c51', shape: '' },
+        { id: 'cream-tote', label: 'クリームトート', color: '#d9cdb9', shape: '' },
+      ],
+    };
+
+    const tabs = document.getElementById('tabs');
+    const items = document.getElementById('items');
+    const memo = document.getElementById('memo');
+    const shuffleButton = document.getElementById('shuffle');
+    const saveButton = document.getElementById('save');
+    const status = document.getElementById('status');
+    const entries = document.getElementById('entries');
+    const entryCount = document.getElementById('entry-count');
+    const lookCaption = document.getElementById('look-caption');
+    const topPiece = document.getElementById('top-piece');
+    const bottomPiece = document.getElementById('bottom-piece');
+    const outerPiece = document.getElementById('outer-piece');
+    const shoeLeft = document.getElementById('shoe-left');
+    const shoeRight = document.getElementById('shoe-right');
+    const bagPiece = document.getElementById('bag-piece');
+
+    let state = null;
+    let selectedCategory = 'top';
+    let storageMode = null;
+    let started = false;
+    let busy = false;
+
+    function hasMinAppState() {
+      return Boolean(
+        window.minapp &&
+        window.minapp.version === 1 &&
+        window.minapp.state &&
+        typeof window.minapp.state.get === 'function' &&
+        typeof window.minapp.state.set === 'function'
+      );
+    }
+
+    function isLocalPreview() {
+      return window.location.protocol === 'file:';
+    }
+
+    function wardrobeItem(category, id) {
+      const categoryItems = WARDROBE[category];
+      if (!categoryItems) throw new Error('Unknown wardrobe category: ' + category);
+      const found = categoryItems.find((item) => item.id === id);
+      if (!found) throw new Error('Unknown wardrobe item: ' + category + '/' + id);
+      return found;
+    }
+
+    function defaultState() {
+      return {
+        version: STATE_VERSION,
+        current: {
+          top: 'cream-knit',
+          bottom: 'denim-skirt',
+          outer: 'ivory-cardigan',
+          shoes: 'brown-loafer',
+          bag: 'brown-mini',
+        },
+        draftNote: '',
+        entries: [],
+      };
+    }
+
+    function assertPlainObject(value, path) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('Invalid saved state: ' + path);
+      }
+    }
+
+    function assertAllowedKeys(value, allowed, path) {
+      for (const key of Object.keys(value)) {
+        if (!allowed.includes(key)) {
+          throw new Error('Invalid saved state: unexpected key ' + path + '.' + key);
+        }
+      }
+    }
+
+    function validateLook(value, path) {
+      assertPlainObject(value, path);
+      assertAllowedKeys(value, CATEGORIES, path);
+      for (const category of CATEGORIES) {
+        if (typeof value[category] !== 'string') {
+          throw new Error('Invalid saved state: ' + path + '.' + category);
+        }
+        wardrobeItem(category, value[category]);
+      }
+      return value;
+    }
+
+    function validateState(value) {
+      assertPlainObject(value, 'root');
+      assertAllowedKeys(value, ['version', 'current', 'draftNote', 'entries'], 'root');
+      if (value.version !== STATE_VERSION) {
+        throw new Error('Unsupported saved state version: ' + String(value.version));
+      }
+      validateLook(value.current, 'current');
+      if (typeof value.draftNote !== 'string' || value.draftNote.length > 80) {
+        throw new Error('Invalid saved state: draftNote');
+      }
+      if (!Array.isArray(value.entries)) throw new Error('Invalid saved state: entries');
+      for (let i = 0; i < value.entries.length; i += 1) {
+        const entry = value.entries[i];
+        const path = 'entries[' + i + ']';
+        assertPlainObject(entry, path);
+        assertAllowedKeys(entry, ['id', 'savedAt', 'note', 'look'], path);
+        if (typeof entry.id !== 'string' || !/^[0-9]{10,20}$/.test(entry.id)) {
+          throw new Error('Invalid saved state: ' + path + '.id');
+        }
+        if (typeof entry.savedAt !== 'number' || !Number.isFinite(entry.savedAt) || entry.savedAt <= 0) {
+          throw new Error('Invalid saved state: ' + path + '.savedAt');
+        }
+        if (typeof entry.note !== 'string' || entry.note.length > 80) {
+          throw new Error('Invalid saved state: ' + path + '.note');
+        }
+        validateLook(entry.look, path + '.look');
+      }
+      return value;
+    }
+
+    async function persist() {
+      if (!state) throw new Error('State is not initialized.');
+
+      if (storageMode === 'minapp') {
+        if (!hasMinAppState()) throw new Error('MinApp state bridge disappeared while saving.');
+        await window.minapp.state.set(SAVE_KEY, state);
+        return;
+      }
+      if (storageMode === 'local') {
+        window.localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        return;
+      }
+      throw new Error('Storage mode is not initialized.');
+    }
+
+    function setStatus(message, isError = false) {
+      status.textContent = message;
+      status.classList.toggle('error', isError);
+    }
+
+    function cloneCurrentLook() {
+      const look = {};
+      for (const category of CATEGORIES) look[category] = state.current[category];
+      return look;
+    }
+
+    function formatEntryDate(timestamp) {
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) throw new Error('Invalid timestamp: ' + timestamp);
+      return new Intl.DateTimeFormat('ja-JP', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    }
+
+    function renderTabs() {
+      tabs.replaceChildren();
+      for (const category of CATEGORIES) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tab' + (category === selectedCategory ? ' active' : '');
+        button.textContent = CATEGORY_LABELS[category];
+        button.dataset.category = category;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', category === selectedCategory ? 'true' : 'false');
+        tabs.appendChild(button);
+      }
+    }
+
+    function renderItems() {
+      items.replaceChildren();
+      for (const item of WARDROBE[selectedCategory]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'item' + (state.current[selectedCategory] === item.id ? ' selected' : '');
+        button.dataset.itemId = item.id;
+        button.setAttribute('aria-pressed', state.current[selectedCategory] === item.id ? 'true' : 'false');
+
+        const swatch = document.createElement('span');
+        swatch.className = 'swatch' + (item.shape === 'none' ? ' none' : '');
+        swatch.style.background = item.color;
+        if (item.shape === 'none') swatch.textContent = '×';
+
+        const label = document.createElement('span');
+        label.textContent = item.label;
+        button.append(swatch, label);
+        items.appendChild(button);
+      }
+    }
+
+    function renderLook() {
+      const top = wardrobeItem('top', state.current.top);
+      const bottom = wardrobeItem('bottom', state.current.bottom);
+      const outer = wardrobeItem('outer', state.current.outer);
+      const shoes = wardrobeItem('shoes', state.current.shoes);
+      const bag = wardrobeItem('bag', state.current.bag);
+
+      topPiece.className = 'top-piece' + (top.shape ? ' ' + top.shape : '');
+      topPiece.style.background = top.color;
+
+      bottomPiece.className = 'bottom-piece ' + bottom.shape;
+      bottomPiece.style.background = bottom.color;
+      bottomPiece.style.setProperty('--bottom-color', bottom.color);
+
+      outerPiece.className = 'outer-piece' + (outer.shape === 'none' ? ' none' : '');
+      outerPiece.style.borderColor = outer.shape === 'none' ? 'transparent' : outer.color;
+      outerPiece.style.setProperty('--outer-color', outer.color);
+
+      shoeLeft.style.background = shoes.color;
+      shoeRight.style.background = shoes.color;
+
+      bagPiece.className = 'bag-piece' + (bag.shape === 'none' ? ' none' : '');
+      bagPiece.style.background = bag.color;
+      bagPiece.style.borderColor = bag.shape === 'none' ? 'transparent' : bag.color;
+      bagPiece.style.setProperty('--bag-color', bag.color);
+
+      lookCaption.textContent = top.label + ' × ' + bottom.label + ' × ' + shoes.label;
+    }
+
+    function renderEntries() {
+      entries.replaceChildren();
+      entryCount.textContent = state.entries.length + (state.entries.length === 1 ? ' look' : ' looks');
+
+      if (state.entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'diary-empty';
+        empty.textContent = 'まだコーデはありません。\\Aお気に入りができたら保存してみよう ♡';
+        empty.style.whiteSpace = 'pre-line';
+        entries.appendChild(empty);
+        return;
+      }
+
+      const ordered = [...state.entries].sort((a, b) => b.savedAt - a.savedAt);
+      for (const entry of ordered) {
+        const row = document.createElement('div');
+        row.className = 'entry';
+
+        const preview = document.createElement('div');
+        preview.className = 'entry-preview';
+        for (const category of ['top', 'bottom', 'shoes', 'bag']) {
+          const swatch = document.createElement('span');
+          swatch.style.background = wardrobeItem(category, entry.look[category]).color;
+          preview.appendChild(swatch);
+        }
+
+        const text = document.createElement('div');
+        text.className = 'entry-text';
+        const date = document.createElement('div');
+        date.className = 'entry-date';
+        date.textContent = formatEntryDate(entry.savedAt);
+        const note = document.createElement('div');
+        note.className = 'entry-note';
+        note.textContent = entry.note || 'メモなし';
+        text.append(date, note);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'delete';
+        del.dataset.entryId = entry.id;
+        del.setAttribute('aria-label', formatEntryDate(entry.savedAt) + 'のコーデを削除');
+        del.textContent = '×';
+
+        row.append(preview, text, del);
+        entries.appendChild(row);
+      }
+    }
+
+    function render() {
+      if (!state) return;
+      renderTabs();
+      renderItems();
+      renderLook();
+      renderEntries();
+      if (memo.value !== state.draftNote && document.activeElement !== memo) {
+        memo.value = state.draftNote;
+      }
+      shuffleButton.disabled = busy;
+      saveButton.disabled = busy;
+    }
+
+    async function withAction(action, successMessage) {
+      if (busy || !state) return;
+      busy = true;
+      render();
+      try {
+        await action();
+        validateState(state);
+        await persist();
+        if (successMessage) setStatus(successMessage);
+      } catch (error) {
+        setStatus('エラー: ' + (error instanceof Error ? error.message : String(error)), true);
+      } finally {
+        busy = false;
+        render();
+      }
+    }
+
+    tabs.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-category]');
+      if (!button) return;
+      const category = button.dataset.category;
+      if (!CATEGORIES.includes(category)) {
+        setStatus('エラー: Unknown category selected.', true);
+        return;
+      }
+      selectedCategory = category;
+      renderTabs();
+      renderItems();
+    });
+
+    items.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-item-id]');
+      if (!button) return;
+      const itemId = button.dataset.itemId;
+      withAction(async () => {
+        wardrobeItem(selectedCategory, itemId);
+        state.current[selectedCategory] = itemId;
+      }, CATEGORY_LABELS[selectedCategory] + 'を変えました');
+    });
+
+    memo.addEventListener('change', () => {
+      withAction(async () => {
+        if (memo.value.length > 80) throw new Error('Memo exceeds 80 characters.');
+        state.draftNote = memo.value;
+      }, 'メモを保存しました');
+    });
+
+    shuffleButton.addEventListener('click', () => {
+      withAction(async () => {
+        for (const category of CATEGORIES) {
+          const choices = WARDROBE[category];
+          if (!Array.isArray(choices) || choices.length === 0) {
+            throw new Error('Wardrobe category is empty: ' + category);
+          }
+          state.current[category] = choices[Math.floor(Math.random() * choices.length)].id;
+        }
+      }, 'おまかせコーデに着替えました ♡');
+    });
+
+    saveButton.addEventListener('click', () => {
+      withAction(async () => {
+        if (memo.value.length > 80) throw new Error('Memo exceeds 80 characters.');
+        state.draftNote = memo.value;
+        const now = Date.now();
+        const id = String(now);
+        if (state.entries.some((entry) => entry.id === id)) {
+          throw new Error('Duplicate entry id: ' + id);
+        }
+        state.entries.push({
+          id,
+          savedAt: now,
+          note: state.draftNote.trim(),
+          look: cloneCurrentLook(),
+        });
+        state.draftNote = '';
+        memo.value = '';
+      }, '今日のコーデを日記に保存しました ♡');
+    });
+
+    entries.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-entry-id]');
+      if (!button) return;
+      const entryId = button.dataset.entryId;
+      withAction(async () => {
+        const index = state.entries.findIndex((entry) => entry.id === entryId);
+        if (index < 0) throw new Error('Entry not found: ' + entryId);
+        state.entries.splice(index, 1);
+      }, 'コーデを削除しました');
+    });
+
+    async function bootMinAppState() {
+      if (!hasMinAppState()) throw new Error('MinApp state bridge is unavailable.');
+      storageMode = 'minapp';
+      try {
+        state = validateState(await window.minapp.state.get(SAVE_KEY));
+        setStatus('コーデ帳を読み込みました');
+      } catch (error) {
+        if (error && error.code === 'state_not_found') {
+          state = defaultState();
+          await persist();
+          setStatus('新しいコーデ帳をつくりました ♡');
+        } else {
+          throw error;
+        }
+      }
+      started = true;
+      memo.value = state.draftNote;
+      render();
+    }
+
+    async function bootLocalStorage() {
+      storageMode = 'local';
+      const raw = window.localStorage.getItem(SAVE_KEY);
+      if (raw === null) {
+        state = defaultState();
+        await persist();
+        setStatus('プレビュー用のコーデ帳をつくりました');
+      } else {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (error) {
+          throw new Error('Invalid local saved state JSON: ' + (error instanceof Error ? error.message : String(error)));
+        }
+        state = validateState(parsed);
+        setStatus('プレビュー用データを読み込みました');
+      }
+      started = true;
+      memo.value = state.draftNote;
+      render();
+    }
+
+    function stopForStorageError(error) {
+      setStatus('保存を開始できません: ' + (error instanceof Error ? error.message : String(error)), true);
+      shuffleButton.disabled = true;
+      saveButton.disabled = true;
+      memo.disabled = true;
+    }
+
+    async function handleMinAppReady() {
+      if (started) return;
+      try {
+        await bootMinAppState();
+      } catch (error) {
+        stopForStorageError(error);
+      }
+    }
+
+    window.addEventListener('minappready', handleMinAppReady);
+
+    if (isLocalPreview()) {
+      bootLocalStorage().catch(stopForStorageError);
+    } else if (hasMinAppState()) {
+      handleMinAppReady();
+    } else {
+      window.setTimeout(() => {
+        if (!started) stopForStorageError(new Error('MinApp state bridge is unavailable.'));
+      }, 1200);
+    }
+  </script>
+</body>
+</html>
