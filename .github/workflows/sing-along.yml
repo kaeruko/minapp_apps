@@ -1,0 +1,25 @@
+name: Sing Along CI
+
+on:
+  push:
+    paths:
+      - 'sing_along/**'
+      - '.github/workflows/sing-along.yml'
+  pull_request:
+    paths:
+      - 'sing_along/**'
+      - '.github/workflows/sing-along.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sing-along:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test melody, recording and playback
+        run: node --test sing_along/test_sing_along.js
