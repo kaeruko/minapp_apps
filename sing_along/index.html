@@ -136,6 +136,9 @@
 
     const MAX_SECONDS = 60;
     const BGM_MASTER_GAIN = 3.0;
+    const BGM_LOOKAHEAD_SECONDS = 1.5;
+    const BGM_SCHEDULER_INTERVAL_MS = 200;
+    const AUDIO_CLOCK_STALL_MS = 1800;
     // Holst, The Planets (1921 score), Jupiter, Andante maestoso:
     // first seven complete bars after the G3/Bb3 pickup (printed p.91).
     // Each pair is [MIDI note, quarter-note beats]; tied notes are combined.
@@ -274,6 +277,7 @@
 
     let audioContext = null;
     let bgmNodes = [];
+    let bgmSchedulerId = null;
     let mediaStream = null;
     let recorder = null;
     let recordedBlob = null;
@@ -486,6 +490,63 @@
       oscillator.start(start);
       oscillator.stop(start + duration + 0.03);
       bgmNodes.push(oscillator, gain);
+      oscillator.addEventListener('ended', () => {
+        oscillator.disconnect();
+        gain.disconnect();
+        bgmNodes = bgmNodes.filter((node) => node !== oscillator && node !== gain);
+      });
+    }
+
+    function scoreToneEvents(track) {
+      const pulse = scoreCountInPulseBeats(track);
+      const events = [];
+      for (let count = 0; count < track.leadInBeats / pulse; count += 1) {
+        events.push({ offsetBeats: count * pulse, note: 79,
+          fixedDurationSeconds: 0.09, gainValue: 0.018, wave: 'sine' });
+      }
+      let melodyBeat = track.leadInBeats;
+      for (const [note, beats] of track.melody) {
+        if (note !== null) {
+          events.push({ offsetBeats: melodyBeat, note,
+            durationBeats: beats, durationFactor: 0.96, gainValue: 0.055, wave: 'triangle' });
+        }
+        melodyBeat += beats;
+      }
+      let harmonyBeat = track.leadInBeats;
+      for (const [notes, beats] of track.harmony) {
+        if (notes !== null) {
+          for (const note of notes) {
+            events.push({ offsetBeats: harmonyBeat, note,
+              durationBeats: beats, durationFactor: 0.98, gainValue: 0.009, wave: 'sine' });
+          }
+        }
+        harmonyBeat += beats;
+      }
+      return events;
+    }
+
+    function bgmToneEvents(track) {
+      if (track.kind === 'score') return scoreToneEvents(track);
+      if (track.kind !== 'loop') throw new Error(`Unsupported BGM track kind: ${track.kind}`);
+      const events = [];
+      const beat = 60 / track.bpm;
+      const totalBeats = Math.ceil(MAX_SECONDS / beat) + 4;
+      for (let beatIndex = 0; beatIndex < totalBeats; beatIndex += 1) {
+        const chord = track.chords[Math.floor(beatIndex / 4) % track.chords.length];
+        if (beatIndex % 4 === 0) {
+          for (const offset of chord) {
+            events.push({ offsetBeats: beatIndex, note: track.root + offset,
+              durationBeats: 3.8, gainValue: 0.035, wave: track.wave });
+          }
+        }
+        events.push({ offsetBeats: beatIndex, note: track.root - 12 + chord[0],
+          durationBeats: 0.8, gainValue: 0.045, wave: 'sine' });
+        if (beatIndex % 2 === 0) {
+          events.push({ offsetBeats: beatIndex, note: 84,
+            fixedDurationSeconds: 0.035, gainValue: 0.018, wave: 'square' });
+        }
+      }
+      return events;
     }
 
     async function startBgm(scheduledStart = null) {
@@ -497,44 +558,47 @@
       if (!Number.isFinite(start) || start < context.currentTime) {
         throw new Error(`BGM start time is invalid: start=${start}, current=${context.currentTime}`);
       }
-      const totalBeats = Math.ceil(MAX_SECONDS / beat) + 4;
 
+      // Scheduling the whole song at once leaves hundreds of live WebAudio
+      // nodes on Android. Keep the same score, but queue only the near future.
+      const events = bgmToneEvents(track).sort((a, b) => a.offsetBeats - b.offsetBeats);
       stopBgm();
-      if (track.kind === 'score') {
-        const pulse = scoreCountInPulseBeats(track);
-        for (let count = 0; count < track.leadInBeats / pulse; count += 1) {
-          scheduleTone(context, context.destination, midiToHz(79), start + count * pulse * beat, 0.09, 0.018, 'sine');
+      let cursor = 0;
+      let lastAudioTime = context.currentTime;
+      let lastAudioAdvanceWall = performance.now();
+      const scheduleAhead = () => {
+        if (context.state !== 'running') {
+          throw new Error(`BGM AudioContext became ${context.state} during playback.`);
         }
-        let melodyBeat = track.leadInBeats;
-        for (const [note, beats] of track.melody) {
-          if (note !== null) {
-            scheduleTone(context, context.destination, midiToHz(note), start + melodyBeat * beat, beats * beat * 0.96, 0.055, 'triangle');
-          }
-          melodyBeat += beats;
+        const audioTime = context.currentTime;
+        const wallTime = performance.now();
+        if (audioTime > lastAudioTime + 0.001) {
+          lastAudioTime = audioTime;
+          lastAudioAdvanceWall = wallTime;
+        } else if (wallTime - lastAudioAdvanceWall > AUDIO_CLOCK_STALL_MS) {
+          throw new Error(`BGM audio clock stopped advancing: state=${context.state}, current=${audioTime.toFixed(3)}, wallElapsedMs=${Math.round(wallTime - lastAudioAdvanceWall)}`);
         }
-        let harmonyBeat = track.leadInBeats;
-        for (const [notes, beats] of track.harmony) {
-          if (notes !== null) {
-            for (const note of notes) {
-              scheduleTone(context, context.destination, midiToHz(note), start + harmonyBeat * beat, beats * beat * 0.98, 0.009, 'sine');
-            }
-          }
-          harmonyBeat += beats;
+        const horizon = audioTime + BGM_LOOKAHEAD_SECONDS;
+        while (cursor < events.length) {
+          const event = events[cursor];
+          const when = start + event.offsetBeats * beat;
+          if (when > horizon) break;
+          const duration = event.fixedDurationSeconds ??
+            event.durationBeats * beat * (event.durationFactor ?? 1);
+          scheduleTone(context, context.destination, midiToHz(event.note),
+            when, duration, event.gainValue, event.wave);
+          cursor += 1;
         }
-        return start;
-      }
-      for (let beatIndex = 0; beatIndex < totalBeats; beatIndex += 1) {
-        const chord = track.chords[Math.floor(beatIndex / 4) % track.chords.length];
-        const when = start + beatIndex * beat;
-        if (beatIndex % 4 === 0) {
-          for (const offset of chord) {
-            scheduleTone(context, context.destination, midiToHz(track.root + offset), when, beat * 3.8, 0.035, track.wave);
-          }
+        if (cursor === events.length && bgmSchedulerId !== null) {
+          clearInterval(bgmSchedulerId);
+          bgmSchedulerId = null;
         }
-        scheduleTone(context, context.destination, midiToHz(track.root - 12 + chord[0]), when, beat * 0.8, 0.045, 'sine');
-        if (beatIndex % 2 === 0) {
-          scheduleTone(context, context.destination, midiToHz(84), when, 0.035, 0.018, 'square');
-        }
+      };
+      scheduleAhead();
+      if (cursor < events.length) {
+        bgmSchedulerId = setInterval(() => {
+          try { scheduleAhead(); } catch (error) { fail(error); }
+        }, BGM_SCHEDULER_INTERVAL_MS);
       }
       return start;
     }
@@ -552,6 +616,8 @@
     }
 
     function stopBgm() {
+      if (bgmSchedulerId !== null) clearInterval(bgmSchedulerId);
+      bgmSchedulerId = null;
       for (const node of bgmNodes) {
         try { if (typeof node.stop === 'function') node.stop(); } catch (_) {}
         try { node.disconnect(); } catch (_) {}
