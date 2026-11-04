@@ -209,6 +209,96 @@ test('Mozart recording uses its own song limit and keeps that song until the tak
   assert.equal(app.errors.length, 0);
 });
 
+test('Clair de lune preserves the opening rest, tied melody and duplets after three compound pulses', async () => {
+  const app = harness();
+  assert.match(html, /<option value="clair-de-lune">月の光/);
+  app.elements.track.value = 'clair-de-lune';
+  app.run('updateTrackInfo()');
+  assert.equal(app.run('scoreBeats(currentTrack())'), 37.5);
+  near(app.run('trackDurationSeconds()'), 35.15);
+  assert.match(app.elements.limit.textContent, /00:36/);
+
+  const start = await app.run('startBgm()');
+  const beat = 60 / 72;
+  const cues = app.oscillators.filter((tone) => tone.hz === hz(79));
+  assert.equal(cues.length, 3);
+  for (const [index, cue] of cues.entries()) near(cue.starts[0], start + index * 1.5 * beat);
+
+  const melody = app.oscillators.filter((tone) => tone.type === 'triangle');
+  // Upper voice, bars 1-4, one octave lower. Cross-bar ties and the
+  // bar-3 duplets make several note lengths cross the usual beat grid.
+  const pitches = [56, 68, 65, 63, 65, 63, 61, 63, 61, 65, 61, 60, 61, 60];
+  const onsets = [0.5, 1, 3, 5, 5.5, 6, 9.5, 10, 10.5, 11.25, 12.75, 14, 14.5, 15];
+  assert.equal(melody.length, 29, 'Rests must advance time without creating an oscillator.');
+  for (let repeat = 0; repeat < 2; repeat += 1) {
+    for (const [index, pitch] of pitches.entries()) {
+      const tone = melody[repeat * pitches.length + index];
+      near(tone.hz, hz(pitch));
+      near(tone.starts[0], start + (4.5 + repeat * 18 + onsets[index]) * beat);
+    }
+  }
+  near(melody[2].stops[0], melody[2].starts[0] + 2 * beat * 0.96 + 0.03);
+  near(melody[5].stops[0], melody[5].starts[0] + 3.5 * beat * 0.96 + 0.03);
+  near(melody.at(-1).hz, hz(61));
+  near(melody.at(-1).starts[0], start + 40.5 * beat);
+
+  const music = app.oscillators.filter((tone) => !cues.includes(tone));
+  const end = start + app.run('trackDurationSeconds()');
+  for (const tone of music) {
+    assert.ok(tone.starts[0] >= start + 5 * beat, 'Both parts must honor the opening rest.');
+    assert.ok(tone.stops[0] <= end, 'No note may exceed the song end.');
+  }
+  assert.equal(app.counts().micCalls, 0);
+  assert.equal(app.errors.length, 0);
+});
+
+test('Clair de lune recording stops at its own duration and replays the selected song', async () => {
+  const app = harness();
+  app.elements.track.value = 'clair-de-lune';
+  app.run('updateTrackInfo()');
+  await app.run('startRecording()');
+  app.tick(45.1);
+  assert.equal(app.run('recorder.state'), 'recording');
+  app.tick(45.3);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(app.run('recorder.state'), 'inactive');
+  assert.equal(app.counts().streamStops, 1);
+  assert.equal(app.elements.track.disabled, true);
+  assert.equal(app.elements.play.disabled, false);
+  const previousTones = app.oscillators.length;
+  await app.run('playRecording()');
+  const voiceStart = app.sources[0].starts[0];
+  const cueStart = app.oscillators[previousTones].starts[0];
+  near(cueStart - voiceStart, 0.05);
+  const replayMelody = app.oscillators.slice(previousTones).filter((tone) => tone.type === 'triangle');
+  near(replayMelody[0].hz, hz(56));
+  near(replayMelody[0].starts[0], cueStart + 5 * 60 / 72);
+  app.sources[0].listeners.get('ended')();
+  assert.equal(app.elements.stop.disabled, true);
+  app.run('deleteRecording()');
+  assert.equal(app.elements.track.disabled, false);
+  assert.equal(app.errors.length, 0);
+});
+
+test('only explicit null rests and valid count-in pulse lengths are accepted', () => {
+  const app = harness();
+  assert.equal(app.run('scoreBeats({ ...TRACKS.jupiter, melody: [[null, 1]], harmony: [[null, 1]] })'), 1);
+  for (const mutation of [
+    'melody: [[undefined, 1]]',
+    'melody: [["rest", 1]]',
+    'melody: [[null, 0]]',
+    'harmony: [[[], 1]]',
+    'harmony: [[[null], 1]]',
+    'countInPulseBeats: null',
+    'countInPulseBeats: 0',
+    'countInPulseBeats: NaN',
+    'countInPulseBeats: "1.5"',
+    'leadInBeats: 1.25',
+  ]) assert.throws(() => app.run(`trackDurationSeconds({ ...TRACKS.jupiter, ${mutation} })`));
+  assert.equal(app.oscillators.length, 0);
+  assert.equal(app.counts().micCalls, 0);
+});
+
 test('preview stops at the song end without opening the microphone', async () => {
   const app = harness();
   await app.run('previewBgm()');
