@@ -147,6 +147,17 @@ function harness() {
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
 const hz = (note) => 440 * 2 ** ((note - 69) / 12);
 
+test('track labels and descriptions do not show the old la-la-la instruction', () => {
+  for (const [id, title] of [
+    ['jupiter', '木星（ホルスト）'],
+    ['mozart-25', '交響曲第25番（モーツァルト）'],
+    ['clair-de-lune', '月の光（ドビュッシー）'],
+  ]) {
+    assert.ok(html.includes(`<option value="${id}">${title}</option>`), `Unexpected track label for ${id}`);
+  }
+  assert.ok(!html.includes('ラララ'), 'Old la-la-la copy must not appear in this app');
+});
+
 test('Jupiter is selectable, fits one minute, and uses matching melody/accompaniment lengths', () => {
   const app = harness();
   assert.match(html, /<option value="jupiter">木星/);
