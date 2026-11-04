@@ -104,6 +104,17 @@ function harness() {
     run: (code) => vm.runInContext(code, sandbox),
     elements, oscillators, sources, errors, context, navigator, intervals,
     counts: () => ({ micCalls, streamStops, decodeCalls, resumeCalls }),
+    scheduleAllBgm() {
+      const previousAudioTime = context.currentTime;
+      const schedulerId = vm.runInContext('bgmSchedulerId', sandbox);
+      assert.notEqual(schedulerId, null);
+      for (let step = 1; step <= 280 && intervals.has(schedulerId); step += 1) {
+        context.currentTime = previousAudioTime + step / 4;
+        intervals.get(schedulerId)();
+      }
+      assert.equal(intervals.has(schedulerId), false);
+      context.currentTime = previousAudioTime;
+    },
     tick(time, audioTime = time) {
       clockMilliseconds = time * 1000;
       context.currentTime = audioTime;
@@ -129,6 +140,7 @@ test('Jupiter schedules the original pickup and dotted rhythm after two cues, en
   const app = harness();
   const start = await app.run('startBgm()');
   const beat = 60 / 76;
+  app.scheduleAllBgm();
   const melody = app.oscillators.filter((oscillator) => oscillator.type === 'triangle');
   for (const [index, note] of [55, 58, 60, 63, 62, 58].entries()) near(melody[index].hz, hz(note));
   near(melody[0].starts[0], start + 2 * beat);
@@ -155,6 +167,7 @@ test('Mozart 25 keeps the score syncopation, arpeggio and three repeats within i
 
   const start = await app.run('startBgm()');
   const beat = 60 / 128;
+  app.scheduleAllBgm();
   const melody = app.oscillators.filter((oscillator) => oscillator.type === 'triangle');
   // IMSLP's opening five bars, down one octave: G4, D4, Eb4, F#3,
   // then G3-Bb3-D4-G4-Bb4-A4-G4-F#4-G4.
@@ -220,6 +233,7 @@ test('Clair de lune preserves the opening rest, tied melody and duplets after th
 
   const start = await app.run('startBgm()');
   const beat = 60 / 72;
+  app.scheduleAllBgm();
   const cues = app.oscillators.filter((tone) => tone.hz === hz(79));
   assert.equal(cues.length, 3);
   for (const [index, cue] of cues.entries()) near(cue.starts[0], start + index * 1.5 * beat);
@@ -267,6 +281,7 @@ test('Clair de lune recording stops at its own duration and replays the selected
   assert.equal(app.elements.play.disabled, false);
   const previousTones = app.oscillators.length;
   await app.run('playRecording()');
+  app.scheduleAllBgm();
   const voiceStart = app.sources[0].starts[0];
   const cueStart = app.oscillators[previousTones].starts[0];
   near(cueStart - voiceStart, 0.05);
@@ -328,6 +343,34 @@ test('the three existing backing tracks retain their 60-second loops', async () 
     assert.equal(app.elements.stop.disabled, true);
     assert.equal(app.errors.length, 0);
   }
+});
+
+test('rolling scheduler continues after 17 seconds without excessive initial audio nodes', async () => {
+  const app = harness();
+  const start = await app.run('startBgm()');
+  assert.ok(app.oscillators.length < 20);
+  const initialCount = app.oscillators.length;
+  for (let time = 10.25; time <= 28; time += 0.25) app.tick(time);
+  assert.ok(app.oscillators.length > initialCount);
+  assert.equal(app.errors.length, 0);
+  near(start, 10.05);
+  app.run('stopByUser()');
+  assert.equal(app.intervals.size, 0);
+  app.elements.track.value = 'after-school';
+  app.run('updateTrackInfo()');
+  await app.run('previewBgm()');
+  assert.ok(app.oscillators.length > initialCount);
+  app.run('stopByUser()');
+  assert.equal(app.errors.length, 0);
+});
+
+test('stalled AudioContext clock reports the cause and stops', async () => {
+  const app = harness();
+  await app.run('previewBgm()');
+  app.tick(12, 10);
+  assert.equal(app.errors.length, 1);
+  assert.match(app.elements.status.textContent, /BGM audio clock stopped advancing/);
+  assert.equal(app.intervals.size, 0);
 });
 
 test('the time limit still stops recording if the audio clock suspends', async () => {
