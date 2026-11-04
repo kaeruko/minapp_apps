@@ -144,6 +144,71 @@ test('Jupiter schedules the original pickup and dotted rhythm after two cues, en
   }
 });
 
+test('Mozart 25 keeps the score syncopation, arpeggio and three repeats within its duration', async () => {
+  const app = harness();
+  assert.match(html, /<option value="mozart-25">交響曲第25番/);
+  app.elements.track.value = 'mozart-25';
+  app.run('updateTrackInfo()');
+  assert.equal(app.run('scoreBeats(currentTrack())'), 64);
+  near(app.run('trackDurationSeconds()'), 32.025);
+  assert.match(app.elements.limit.textContent, /00:33/);
+
+  const start = await app.run('startBgm()');
+  const beat = 60 / 128;
+  const melody = app.oscillators.filter((oscillator) => oscillator.type === 'triangle');
+  // IMSLP's opening five bars, down one octave: G4, D4, Eb4, F#3,
+  // then G3-Bb3-D4-G4-Bb4-A4-G4-F#4-G4.
+  assert.equal(melody.length, 88);
+  for (let repeat = 0; repeat < 3; repeat += 1) {
+    const offset = repeat * 29;
+    const phraseStart = start + (4 + repeat * 20) * beat;
+    for (const [bar, note] of [67, 62, 63, 54].entries()) {
+      for (const [index, onset] of [0, 0.5, 1.5, 2.5, 3.5].entries()) {
+        const tone = melody[offset + bar * 5 + index];
+        near(tone.hz, hz(note));
+        near(tone.starts[0], phraseStart + (bar * 4 + onset) * beat);
+      }
+    }
+    const notes = [55, 58, 62, 67, 70, 69, 67, 66, 67];
+    const onsets = [0, 0.5, 1, 1.5, 2, 2.25, 2.5, 2.75, 3];
+    for (const [index, note] of notes.entries()) {
+      near(melody[offset + 20 + index].hz, hz(note));
+      near(melody[offset + 20 + index].starts[0], phraseStart + (16 + onsets[index]) * beat);
+    }
+  }
+  near(melody.at(-1).hz, hz(67));
+  near(melody.at(-1).starts[0], start + 64 * beat);
+  const end = start + app.run('trackDurationSeconds()');
+  for (const oscillator of app.oscillators) {
+    assert.ok(oscillator.starts[0] >= start);
+    assert.ok(oscillator.stops[0] <= end, 'All tones must finish before the Mozart recording limit.');
+  }
+  assert.equal(app.counts().micCalls, 0);
+  assert.equal(app.errors.length, 0);
+});
+
+test('Mozart recording uses its own song limit and keeps that song until the take is deleted', async () => {
+  const app = harness();
+  app.elements.track.value = 'mozart-25';
+  app.run('updateTrackInfo()');
+  await app.run('startRecording()');
+  app.tick(42);
+  assert.equal(app.run('recorder.state'), 'recording');
+  app.tick(43);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(app.run('recorder.state'), 'inactive');
+  assert.equal(app.counts().streamStops, 1);
+  assert.equal(app.elements.track.disabled, true);
+  assert.equal(app.elements.play.disabled, false);
+  assert.equal(app.intervals.size, 0);
+  app.run('deleteRecording()');
+  assert.equal(app.elements.track.disabled, false);
+  app.elements.track.value = 'jupiter';
+  app.run('updateTrackInfo()');
+  near(app.run('trackDurationSeconds()'), 51 * 60 / 76 + 0.15);
+  assert.equal(app.errors.length, 0);
+});
+
 test('preview stops at the song end without opening the microphone', async () => {
   const app = harness();
   await app.run('previewBgm()');

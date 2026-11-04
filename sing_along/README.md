@@ -2,6 +2,15 @@
 
 `index.html` だけで動く、Web Audio の伴奏・メロディとマイク録音のアプリです。
 
+## 交響曲第25番（モーツァルト）
+
+- 原曲: Wolfgang Amadeus Mozart, *Symphony No.25 in G minor*, K.183/173dB, I. *Allegro con brio*。
+- 参照: IMSLP の [作品ページと冒頭譜例](https://imslp.org/wiki/Symphony_No.25_(Mozart,_Wolfgang_Amadeus))。同ページの #00057 は *Mozarts Werke*, Serie VIII, Bd.2, No.25 (pp.39–57), Breitkopf & Härtel, 1880, plate W.A.M.183、Public Domain と記載されている。入力に使ったのは公開ページに表示される第1楽章の冒頭5小節の譜例であり、総譜全体を取り込んだものではない。
+- 譜例の LilyPond 表記は `\relative c''' { \key g \minor g8 g4 g g g8 | d8 d4 d d d8 | es8 es4 es es es8 | fis,8 fis4 fis fis fis8 | g8 bes d g bes16( a g fis g4) | }`。最初の4小節は8分音符・4分音符×3・8分音符のシンコペーションを保持し、第5小節の上行分散和音と16分音符も保持する。
+- メロディは原曲から1オクターブ下げる（最初の音 G5 → G4）。5小節を3回繰り返し、最後に G4 を4拍保持する。繰り返し方と終止、簡略伴奏はこのアプリ用に作成したもの。
+- 4/4拍子、練習用テンポは四分音符 = 128。準備の合図4拍 + 旋律64拍 + 余韻0.15秒で約32.0秒。曲末で録音も自動停止する。
+- 宝石の八神CMは利用箇所を示す参考。現代作品「HASSIN」の独自の音楽表現・録音・歌詞は取り込まず、モーツァルトの原曲譜例を入力元とする。メロディと伴奏は従来どおり oscillator で合成する。
+
 ## 木星（ホルスト）
 
 - 原曲: Gustav Holst, *The Planets*, Op.32, IV. *Jupiter, the Bringer of Jollity*。

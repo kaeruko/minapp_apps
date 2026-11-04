@@ -103,6 +103,7 @@
       <label class="label" for="track">🎵 曲・BGMをえらぶ</label>
       <select id="track">
         <option value="jupiter">木星（ホルスト）・ラララでうたおう</option>
+        <option value="mozart-25">交響曲第25番（モーツァルト）・ラララでうたおう</option>
         <option value="sparkle">きらきらポップ</option>
         <option value="after-school">放課後バラード</option>
         <option value="idol-step">アイドルステップ</option>
@@ -155,6 +156,24 @@
       [[48, 55, 58, 63], 3], [[43, 51, 58, 63], 3],
       [[46, 53, 56, 62], 3], [[39, 51, 55, 58], 3],
     ]);
+    // Mozart, Symphony No.25 K.183, I: opening five-bar incipit on IMSLP.
+    // Preserve the 8th/quarter-note syncopation and the bar-5 arpeggio,
+    // transposed down one octave. Repeats and the held closing G are ours.
+    // This uses Mozart's theme, not the modern CM work "HASSIN".
+    // Score provenance and the exact LilyPond incipit: sing_along/README.md.
+    const MOZART_25_THEME = Object.freeze([
+      [67, 0.5], [67, 1], [67, 1], [67, 1], [67, 0.5],
+      [62, 0.5], [62, 1], [62, 1], [62, 1], [62, 0.5],
+      [63, 0.5], [63, 1], [63, 1], [63, 1], [63, 0.5],
+      [54, 0.5], [54, 1], [54, 1], [54, 1], [54, 0.5],
+      [55, 0.5], [58, 0.5], [62, 0.5], [67, 0.5],
+      [70, 0.25], [69, 0.25], [67, 0.25], [66, 0.25], [67, 1],
+    ]);
+    // Original, simplified accompaniment: G minor, D, C minor, D7, G minor.
+    const MOZART_25_CHORDS = Object.freeze([
+      [[43, 50, 58], 4], [[38, 45, 54], 4], [[48, 55, 63], 4],
+      [[38, 54, 60], 4], [[43, 50, 58], 4],
+    ]);
     const TRACKS = Object.freeze({
       jupiter: Object.freeze({
         kind: 'score',
@@ -164,6 +183,14 @@
         melody: [[55, 0.5], [58, 0.5], ...JUPITER_THEME,
           [63, 2], [55, 0.5], [58, 0.5], ...JUPITER_THEME, [63, 3]],
         harmony: [[[46, 55, 58], 1], ...JUPITER_CHORDS, ...JUPITER_CHORDS],
+      }),
+      'mozart-25': Object.freeze({
+        kind: 'score',
+        bpm: 128,
+        leadInBeats: 4,
+        description: 'モーツァルト「交響曲第25番」第1楽章の冒頭。4つの合図のあと、ラララで短い旋律を3回うたおう。',
+        melody: [...MOZART_25_THEME, ...MOZART_25_THEME, ...MOZART_25_THEME, [67, 4]],
+        harmony: [...MOZART_25_CHORDS, ...MOZART_25_CHORDS, ...MOZART_25_CHORDS, [[43, 50, 58], 4]],
       }),
       sparkle: Object.freeze({
         kind: 'loop',
