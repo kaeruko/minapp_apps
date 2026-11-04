@@ -373,7 +373,7 @@ test('stalled AudioContext clock reports the cause and stops', async () => {
   assert.equal(app.intervals.size, 0);
 });
 
-test('the time limit still stops recording if the audio clock suspends', async () => {
+test('recording stops with a clear error if WebAudio is suspended', async () => {
   const app = harness();
   await app.run('startRecording()');
   app.context.state = 'suspended';
@@ -382,7 +382,8 @@ test('the time limit still stops recording if the audio clock suspends', async (
   assert.equal(app.run('recorder.state'), 'inactive');
   assert.equal(app.counts().streamStops, 1);
   assert.equal(app.intervals.size, 0);
-  assert.equal(app.errors.length, 0);
+  assert.equal(app.errors.length, 1);
+  assert.match(app.elements.status.textContent, /BGM AudioContext became suspended/);
 });
 
 test('recording stops at the song end and replay preserves the voice/BGM offset', async () => {
