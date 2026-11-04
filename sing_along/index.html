@@ -139,6 +139,11 @@
     const BGM_LOOKAHEAD_SECONDS = 1.5;
     const BGM_SCHEDULER_INTERVAL_MS = 200;
     const AUDIO_CLOCK_STALL_MS = 1800;
+    const BGM_OUTPUT_GAIN = 1.35;
+    const TONE_FLOOR_GAIN = 0.0001;
+    const TONE_SUSTAIN_RATIO = 0.72;
+    const TONE_ATTACK_SECONDS = 0.015;
+    const TONE_RELEASE_SECONDS = 0.055;
     // Holst, The Planets (1921 score), Jupiter, Andante maestoso:
     // first seven complete bars after the G3/Bb3 pickup (printed p.91).
     // Each pair is [MIDI note, quarter-note beats]; tied notes are combined.
@@ -486,9 +491,7 @@
       const gain = context.createGain();
       oscillator.type = wave;
       oscillator.frequency.setValueAtTime(frequency, start);
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(gainValue * BGM_MASTER_GAIN, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      scheduleGainEnvelope(gain.gain, start, duration, gainValue * BGM_MASTER_GAIN);
       oscillator.connect(gain).connect(destination);
       oscillator.start(start);
       oscillator.stop(start + duration + 0.03);
@@ -498,34 +501,6 @@
         gain.disconnect();
         bgmNodes = bgmNodes.filter((node) => node !== oscillator && node !== gain);
       });
-    }
-
-    function scoreToneEvents(track) {
-      const pulse = scoreCountInPulseBeats(track);
-      const events = [];
-      for (let count = 0; count < track.leadInBeats / pulse; count += 1) {
-        events.push({ offsetBeats: count * pulse, note: 79,
-          fixedDurationSeconds: 0.09, gainValue: 0.018, wave: 'sine' });
-      }
-      let melodyBeat = track.leadInBeats;
-      for (const [note, beats] of track.melody) {
-        if (note !== null) {
-          events.push({ offsetBeats: melodyBeat, note,
-            durationBeats: beats, durationFactor: 0.96, gainValue: 0.055, wave: 'triangle' });
-        }
-        melodyBeat += beats;
-      }
-      let harmonyBeat = track.leadInBeats;
-      for (const [notes, beats] of track.harmony) {
-        if (notes !== null) {
-          for (const note of notes) {
-            events.push({ offsetBeats: harmonyBeat, note,
-              durationBeats: beats, durationFactor: 0.98, gainValue: 0.009, wave: 'sine' });
-          }
-        }
-        harmonyBeat += beats;
-      }
-      return events;
     }
 
     function bgmToneEvents(track) {
@@ -552,6 +527,64 @@
       return events;
     }
 
+    function scheduleGainEnvelope(gain, start, duration, peak) {
+      if (!Number.isFinite(start) || !Number.isFinite(duration) || duration <= 0 ||
+          !Number.isFinite(peak) || peak <= TONE_FLOOR_GAIN) {
+        throw new Error(`Invalid gain envelope: start=${start}, duration=${duration}, peak=${peak}`);
+      }
+      const attack = Math.min(TONE_ATTACK_SECONDS, duration / 4);
+      const release = Math.min(TONE_RELEASE_SECONDS, duration / 3);
+      const releaseStart = Math.max(start + attack, start + duration - release);
+      gain.setValueAtTime(TONE_FLOOR_GAIN, start);
+      gain.exponentialRampToValueAtTime(peak, start + attack);
+      gain.exponentialRampToValueAtTime(peak * TONE_SUSTAIN_RATIO, releaseStart);
+      gain.exponentialRampToValueAtTime(TONE_FLOOR_GAIN, start + duration);
+    }
+
+    function createBgmOutput(context) {
+      const master = context.createGain();
+      const compressor = context.createDynamicsCompressor();
+      master.gain.setValueAtTime(BGM_OUTPUT_GAIN, context.currentTime);
+      compressor.threshold.setValueAtTime(-12, context.currentTime);
+      compressor.knee.setValueAtTime(18, context.currentTime);
+      compressor.ratio.setValueAtTime(4, context.currentTime);
+      compressor.attack.setValueAtTime(0.003, context.currentTime);
+      compressor.release.setValueAtTime(0.18, context.currentTime);
+      master.connect(compressor).connect(context.destination);
+      bgmNodes.push(master, compressor);
+      return master;
+    }
+
+    function scoreToneEvents(track) {
+      const pulse = scoreCountInPulseBeats(track);
+      const events = [];
+      for (let count = 0; count < track.leadInBeats / pulse; count += 1) {
+        events.push({ lane: 'cue', kind: 'cue', note: 79, offsetBeats: count * pulse,
+          fixedDurationSeconds: 0.09, gainValue: 0.018, wave: 'sine' });
+      }
+
+      let melodyBeat = track.leadInBeats;
+      for (const [note, beats] of track.melody) {
+        if (note !== null) {
+          events.push({ lane: 'melody', kind: 'melody', note, offsetBeats: melodyBeat,
+            durationBeats: beats, durationFactor: 0.96, gainValue: 0.055, wave: 'triangle' });
+        }
+        melodyBeat += beats;
+      }
+
+      let harmonyBeat = track.leadInBeats;
+      for (const [notes, beats] of track.harmony) {
+        if (notes !== null) {
+          for (const [voice, note] of notes.entries()) {
+            events.push({ lane: `harmony-${voice}`, kind: 'harmony', note, offsetBeats: harmonyBeat,
+              durationBeats: beats, durationFactor: 0.98, gainValue: 0.009, wave: 'sine' });
+          }
+        }
+        harmonyBeat += beats;
+      }
+      return events;
+    }
+
     async function startBgm(scheduledStart = null) {
       const context = await ensureAudioContext();
       const track = currentTrack();
@@ -566,6 +599,7 @@
       // nodes on Android. Keep the same score, but queue only the near future.
       const events = bgmToneEvents(track).sort((a, b) => a.offsetBeats - b.offsetBeats);
       stopBgm();
+      const destination = createBgmOutput(context);
       let cursor = 0;
       let lastAudioTime = context.currentTime;
       let lastAudioAdvanceWall = performance.now();
@@ -588,7 +622,7 @@
           if (when > horizon) break;
           const duration = event.fixedDurationSeconds ??
             event.durationBeats * beat * (event.durationFactor ?? 1);
-          scheduleTone(context, context.destination, midiToHz(event.note),
+          scheduleTone(context, destination, midiToHz(event.note),
             when, duration, event.gainValue, event.wave);
           cursor += 1;
         }
