@@ -1,0 +1,42 @@
+name: Publish Kobo apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'drink_budget/**'
+      - 'deploy/kobo/**'
+      - '.github/workflows/publish-kobo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kobo-publish-main
+  cancel-in-progress: false
+
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test 晩酌予算 and deploy contract
+        run: |
+          node drink_budget/test_budget.js
+          python -m unittest discover -s deploy/kobo -p 'test_*.py' -v
+          python deploy/kobo/publish.py --app drink_budget --check
+      - name: Publish to みんアプ工房
+        env:
+          KOBO_API_BASE_URL: ${{ secrets.KOBO_API_BASE_URL }}
+          KOBO_LOGIN_ID: ${{ secrets.KOBO_LOGIN_ID }}
+          KOBO_PASSWORD: ${{ secrets.KOBO_PASSWORD }}
+          KOBO_GROUP_ID: ${{ secrets.KOBO_GROUP_ID }}
+        run: python deploy/kobo/publish.py --app drink_budget --publish

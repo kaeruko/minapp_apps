@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "apps": {
+    "drink_budget": {
+      "title": "晩酌予算",
+      "files": [
+        "index.html",
+        "app.js",
+        "budget.js",
+        "minapp-package.json"
+      ],
+      "shop_visibility": "listed"
+    }
+  }
+}

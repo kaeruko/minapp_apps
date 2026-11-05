@@ -10,7 +10,7 @@
 
 ## 配布・検証
 
-`index.html`・`app.js`・`budget.js` を同じZIPの直下に入れて、工房の「ZIPから追加する」からアップロードしてください。GitHubに追加しただけでは、工房のアプリ一覧に自動登録されません。
+`index.html`・`app.js`・`budget.js`・`minapp-package.json` を配布します。工房へのGitHub Actions自動公開は `../deploy/kobo/README.md` を参照してください。GitHub Actions Secretsの初回設定が済むまでは工房に自動反映されません。
 
 計算と保存データ検証のテスト：
 
