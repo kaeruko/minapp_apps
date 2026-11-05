@@ -55,6 +55,16 @@
         "assets/food_other.png"
       ],
       "shop_visibility": "listed"
+    },
+    "allowance_manager": {
+      "title": "小遣い管理",
+      "files": [
+        "index.html",
+        "app.js",
+        "ledger.js",
+        "minapp-package.json"
+      ],
+      "shop_visibility": "listed"
     }
   }
 }

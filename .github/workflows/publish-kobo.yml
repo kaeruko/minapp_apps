@@ -7,6 +7,7 @@ on:
       - 'drink_budget/**'
       - 'chinese_food_memo/**'
       - 'lunch_roulette/**'
+      - 'allowance_manager/**'
       - 'deploy/kobo/**'
       - '.github/workflows/publish-kobo.yml'
   workflow_dispatch:
@@ -35,6 +36,9 @@ jobs:
           - app: lunch_roulette
             test: test_roulette.js
             core: roulette.js
+          - app: allowance_manager
+            test: test_ledger.js
+            core: ledger.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

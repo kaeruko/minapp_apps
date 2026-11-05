@@ -28,6 +28,13 @@ class PublisherTests(unittest.TestCase):
         self.assertIn("drink_budget", registry)
         self.assertIn("chinese_food_memo", registry)
         self.assertIn("lunch_roulette", registry)
+        self.assertIn("allowance_manager", registry)
+        allowance = publisher.build_zip("allowance_manager", registry["allowance_manager"]["files"])
+        with zipfile.ZipFile(io.BytesIO(allowance)) as archive:
+            self.assertEqual(set(archive.namelist()), set(registry["allowance_manager"]["files"]))
+            self.assertNotIn("test_ledger.js", archive.namelist())
+            self.assertIn("ledger.js", archive.namelist())
+        self.assertEqual(allowance, publisher.build_zip("allowance_manager", registry["allowance_manager"]["files"]))
         lunch = publisher.build_zip("lunch_roulette", registry["lunch_roulette"]["files"])
         self.assertEqual(lunch, publisher.build_zip("lunch_roulette", registry["lunch_roulette"]["files"]))
         with zipfile.ZipFile(io.BytesIO(lunch)) as archive:
