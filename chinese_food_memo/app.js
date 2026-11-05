@@ -323,6 +323,7 @@
       slots = loaded;
       clearDraft();
       render();
+      setMapQuery(DEFAULT_MAP_QUERY, false);
       show('記録を読み込みました。気になる店を地図で探してみよう。');
     } catch (error) {
       stop(error);
@@ -370,12 +371,6 @@
   }
 
   fields.visitedAt.value = todayLocal();
-  setMapQuery(DEFAULT_MAP_QUERY, false);
   window.addEventListener('minappready', () => { void boot(); });
   if (hasBridge()) void boot();
-  else window.setTimeout(() => {
-    if (!slots && !booting && !stopped) {
-      stop(new Error('みんアプ工房から開いてください。個人保存APIが利用できません'));
-    }
-  }, 1800);
 })();
