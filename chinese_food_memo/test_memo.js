@@ -101,6 +101,22 @@ assert.ok(html.includes('id="map-frame-large"'));
 assert.ok(html.indexOf('src="memo.js"') < html.indexOf('src="maps-config.js"'));
 assert.ok(html.indexOf('src="maps-config.js"') < html.indexOf('src="app.js"'));
 assert.ok(app.includes('https://www.google.com/maps/embed/v1/search?'));
+const bootStart = app.indexOf('  async function boot() {');
+const bootEnd = app.indexOf('\n  function submitMapSearch(', bootStart);
+assert.ok(bootStart >= 0 && bootEnd > bootStart, 'boot function must exist');
+const bootScript = app.slice(bootStart, bootEnd);
+const startupStart = app.indexOf('  fields.visitedAt.value = todayLocal();', bootEnd);
+assert.ok(startupStart > bootEnd, 'startup block must exist');
+const startupScript = app.slice(startupStart);
+assert.ok(bootScript.includes('      slots = loaded;'));
+assert.ok(
+  bootScript.indexOf('      slots = loaded;') <
+    bootScript.indexOf('      setMapQuery(DEFAULT_MAP_QUERY, false);'),
+  'Google Maps must not load before the personal state bridge responds'
+);
+assert.ok(startupScript.includes("window.addEventListener('minappready'"));
+assert.ok(!startupScript.includes('setMapQuery('), 'do not start maps before host bridge readiness');
+assert.ok(!startupScript.includes('setTimeout('), 'do not fail before a delayed native bridge is ready');
 assert.equal((mapsConfig.match(/__KOBO_GOOGLE_MAPS_API_KEY__/g) || []).length, 1);
 assert.equal(/AIza[0-9A-Za-z_-]{30,60}/.test(mapsConfig), false, 'real API key must not be committed');
 console.log('chinese_food_memo: all memo domain tests passed');
