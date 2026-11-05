@@ -63,7 +63,8 @@ class FormLayoutTests(unittest.TestCase):
             source,
         )
         self.assertIn('.app { width: 100%; max-width: 600px;', source)
-        self.assertIn('left: 50%; bottom: 0; width: 100%; max-width: 600px;', source)
+        self.assertIn('left: 0; right: 0; bottom: 0; width: 100%; max-width: 600px;', source)
+        self.assertIn('grid-template-columns: repeat(4, minmax(0, 1fr));', source)
         self.assertIn('.map-frame { display: block; width: 100%;', source)
 
     def test_required_vs_optional_controls(self):
