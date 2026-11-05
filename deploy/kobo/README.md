@@ -15,10 +15,10 @@ GitHubの `kaeruko/minapp_apps` → **Settings → Secrets and variables → Act
 
 公開専用アカウントを使い、誰かの個人ログイン情報は登録しないでください。初回のアカウント・グループ登録は工房上で行います。APIへの接続先が未設定、認証できない、参加グループが不一致の場合は処理を止めます。**Secretsがない間は自動公開されません**。GitHubコネクタからSecretsを代理設定する処理はありません。
 
-## 晩酌予算の公開
+## 登録済みアプリの公開
 
-1. `drink_budget/` を編集して `main` にpushします。
-2. GitHub Actionsの `Publish Kobo apps` が `node drink_budget/test_budget.js` と自動公開スクリプトの単体テストを実行します。
+1. `drink_budget/` または `chinese_food_memo/` を編集して `main` にpushします。
+2. GitHub Actionsの `Publish Kobo apps` がアプリ別のNodeテストと自動公開スクリプトの単体テストを実行します。両アプリを個別に検証・公開します。
 3. `minapp-package.json` の安定した `package_id` により、同じアプリを再アップロードすると原則同じ `app_id` が更新されます。内容が同じときは新しいsource revisionは作成されません。
 4. 更新内容をHosted APIで公開し、「みんなのアプリ」に掲載します。すでに同じsource revisionが公開済みなら重複公開しません。
 

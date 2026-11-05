@@ -25,7 +25,12 @@ class PublisherTests(unittest.TestCase):
     def test_registry_and_deterministic_archive(self):
         registry = publisher.parse_registry()
         self.assertIn("drink_budget", registry)
+        self.assertIn("chinese_food_memo", registry)
         content = publisher.build_zip("drink_budget", registry["drink_budget"]["files"])
+        chinese = publisher.build_zip("chinese_food_memo", registry["chinese_food_memo"]["files"])
+        with zipfile.ZipFile(io.BytesIO(chinese)) as archive:
+            self.assertEqual(set(archive.namelist()), set(registry["chinese_food_memo"]["files"]))
+            self.assertNotIn("test_memo.js", archive.namelist())
         self.assertEqual(content, publisher.build_zip("drink_budget", registry["drink_budget"]["files"]))
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
             self.assertEqual(set(zf.namelist()), set(registry["drink_budget"]["files"]))

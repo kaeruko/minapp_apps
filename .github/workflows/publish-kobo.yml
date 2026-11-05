@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'drink_budget/**'
+      - 'chinese_food_memo/**'
       - 'deploy/kobo/**'
       - '.github/workflows/publish-kobo.yml'
   workflow_dispatch:
@@ -20,6 +21,16 @@ jobs:
   validate-and-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - app: drink_budget
+            test: test_budget.js
+            core: budget.js
+          - app: chinese_food_memo
+            test: test_memo.js
+            core: memo.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,15 +39,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Test 晩酌予算 and deploy contract
+      - name: Test ${{ matrix.app }} and deploy contract
         run: |
-          node drink_budget/test_budget.js
+          node --check "${{ matrix.app }}/app.js"
+          node --check "${{ matrix.app }}/${{ matrix.core }}"
+          node "${{ matrix.app }}/${{ matrix.test }}"
           python -m unittest discover -s deploy/kobo -p 'test_*.py' -v
-          python deploy/kobo/publish.py --app drink_budget --check
-      - name: Publish to みんアプ工房
+          python deploy/kobo/publish.py --app "${{ matrix.app }}" --check
+      - name: Publish ${{ matrix.app }} to みんアプ工房
         env:
           KOBO_API_BASE_URL: ${{ secrets.KOBO_API_BASE_URL }}
           KOBO_LOGIN_ID: ${{ secrets.KOBO_LOGIN_ID }}
           KOBO_PASSWORD: ${{ secrets.KOBO_PASSWORD }}
           KOBO_GROUP_ID: ${{ secrets.KOBO_GROUP_ID }}
-        run: python deploy/kobo/publish.py --app drink_budget --publish
+        run: python deploy/kobo/publish.py --app "${{ matrix.app }}" --publish

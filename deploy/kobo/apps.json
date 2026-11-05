@@ -10,6 +10,16 @@
         "minapp-package.json"
       ],
       "shop_visibility": "listed"
+    },
+    "chinese_food_memo": {
+      "title": "町中華メモ",
+      "files": [
+        "index.html",
+        "app.js",
+        "memo.js",
+        "minapp-package.json"
+      ],
+      "shop_visibility": "listed"
     }
   }
 }
