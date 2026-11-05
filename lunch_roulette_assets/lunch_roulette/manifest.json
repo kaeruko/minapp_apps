@@ -1,0 +1,178 @@
+{
+  "asset_sheet_size": [
+    1536,
+    1024
+  ],
+  "assets": [
+    {
+      "name": "app_icon",
+      "width": 178,
+      "height": 175
+    },
+    {
+      "name": "title_logo",
+      "width": 573,
+      "height": 152
+    },
+    {
+      "name": "ramen_brand_icon",
+      "width": 122,
+      "height": 128
+    },
+    {
+      "name": "mallet",
+      "width": 137,
+      "height": 166
+    },
+    {
+      "name": "map_pin",
+      "width": 59,
+      "height": 82
+    },
+    {
+      "name": "zoom_icon",
+      "width": 101,
+      "height": 98
+    },
+    {
+      "name": "info_icon",
+      "width": 69,
+      "height": 70
+    },
+    {
+      "name": "roulette_wheel_base",
+      "width": 293,
+      "height": 313
+    },
+    {
+      "name": "roulette_frame",
+      "width": 290,
+      "height": 321
+    },
+    {
+      "name": "roulette_segments",
+      "width": 254,
+      "height": 260
+    },
+    {
+      "name": "roulette_center",
+      "width": 158,
+      "height": 161
+    },
+    {
+      "name": "roulette_pointer",
+      "width": 70,
+      "height": 104
+    },
+    {
+      "name": "roulette_shadow",
+      "width": 225,
+      "height": 78
+    },
+    {
+      "name": "food_ramen",
+      "width": 145,
+      "height": 111
+    },
+    {
+      "name": "food_curry",
+      "width": 141,
+      "height": 88
+    },
+    {
+      "name": "food_gyudon",
+      "width": 129,
+      "height": 103
+    },
+    {
+      "name": "food_soba_udon",
+      "width": 127,
+      "height": 94
+    },
+    {
+      "name": "food_teishoku",
+      "width": 139,
+      "height": 98
+    },
+    {
+      "name": "food_chinese",
+      "width": 142,
+      "height": 97
+    },
+    {
+      "name": "food_yoshoku",
+      "width": 137,
+      "height": 96
+    },
+    {
+      "name": "food_burger",
+      "width": 112,
+      "height": 102
+    },
+    {
+      "name": "food_convenience",
+      "width": 127,
+      "height": 76
+    },
+    {
+      "name": "food_other",
+      "width": 121,
+      "height": 101
+    },
+    {
+      "name": "button_spin",
+      "width": 297,
+      "height": 74
+    },
+    {
+      "name": "button_filter",
+      "width": 267,
+      "height": 77
+    },
+    {
+      "name": "button_search",
+      "width": 243,
+      "height": 75
+    },
+    {
+      "name": "budget_bar",
+      "width": 583,
+      "height": 77
+    },
+    {
+      "name": "background_wood",
+      "width": 478,
+      "height": 108
+    },
+    {
+      "name": "map_placeholder",
+      "width": 300,
+      "height": 108
+    },
+    {
+      "name": "nav_roulette",
+      "width": 86,
+      "height": 75
+    },
+    {
+      "name": "nav_history",
+      "width": 58,
+      "height": 77
+    },
+    {
+      "name": "nav_map_fab",
+      "width": 123,
+      "height": 108
+    },
+    {
+      "name": "nav_store_info",
+      "width": 78,
+      "height": 80
+    },
+    {
+      "name": "nav_settings",
+      "width": 54,
+      "height": 80
+    }
+  ]
+}
