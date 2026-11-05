@@ -43,6 +43,15 @@ class FormGroups(HTMLParser):
 
 
 class FormLayoutTests(unittest.TestCase):
+    def test_top_save_button_targets_the_existing_form(self):
+        source = HTML_FILE.read_text(encoding="utf-8")
+        self.assertIn('<h1 id="form-title">記録する</h1>', source)
+        self.assertIn('id="save-record" class="save-button" type="submit" form="record-form"', source)
+        self.assertEqual(source.count('id="record-form"'), 1)
+        self.assertEqual(source.count('id="save-record"'), 1)
+        self.assertIn('id="history-title"', source)
+        self.assertNotIn('写真を追加', source)
+
     def test_required_vs_optional_controls(self):
         source = HTML_FILE.read_text(encoding="utf-8")
         parser = FormGroups()

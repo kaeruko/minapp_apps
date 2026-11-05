@@ -3,200 +3,328 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#a52921">
+  <meta name="theme-color" content="#fff8eb">
   <title>町中華メモ | みんアプ工房</title>
   <style>
     :root {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      color: #332b22; background: #f5efdd;
-      --red: #a52921; --deep: #76251e; --gold: #d9b45a; --jade: #1e695e; --ink: #342e27; --line: #decfae;
+      color: #2f302e;
+      background: #f7f1e7;
+      --ink: #2f302e;
+      --muted: #827566;
+      --line: #e4dacc;
+      --orange: #db883d;
+      --orange-deep: #bb692a;
+      --paper: #fffaf3;
+      --field: #ffffff;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
-    body {
-      min-height: 100dvh;
-      background: radial-gradient(ellipse at 18% 8%, #fff9e7 0, transparent 40%),
-        linear-gradient(160deg, #f9f1df, #f2e9d5);
-    }
+    body { min-height: 100dvh; background: #f7f1e7; }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
-    button:disabled, input:disabled, select:disabled, textarea:disabled { opacity: .53; cursor: not-allowed; }
-    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-      outline: 3px solid #c9852b; outline-offset: 2px;
+    button:disabled, input:disabled, select:disabled, textarea:disabled { opacity: .52; cursor: not-allowed; }
+    :is(button, input, select, textarea):focus-visible { outline: 3px solid #e5ad73; outline-offset: 2px; }
+    .app {
+      width: min(100%, 600px);
+      min-height: 100dvh;
+      margin: 0 auto;
+      background: #fffaf3;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      box-shadow: 0 0 20px #58472b0b;
     }
-    .app { width: min(100%, 600px); margin: 0 auto; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-    header { background: var(--red); color: #fff6df; padding: max(22px, env(safe-area-inset-top)) 18px 19px; position: relative; overflow: hidden; }
-    header::before, header::after { content: ""; position: absolute; width: 92px; height: 92px; border: 2px solid #f2d68c55; border-radius: 50%; }
-    header::before { top: -42px; right: -18px; }
-    header::after { bottom: -49px; left: -32px; }
-    .header-inner { position: relative; z-index: 1; border: 1px solid #f4ce865c; padding: 17px 12px 18px; text-align: center; }
-    .eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .19em; color: #ffe0a3; margin: 0 0 6px; }
-    h1 { font-size: clamp(28px, 8vw, 38px); line-height: 1.2; margin: 0; font-weight: 900; letter-spacing: .055em; }
-    .subtitle { font-size: 13px; margin: 8px 0 0; line-height: 1.5; }
-    .ornament { font-size: 20px; margin-bottom: 8px; }
-    main { padding: 15px 13px 0; display: grid; gap: 14px; }
-    .panel { border: 1px solid var(--line); background: #fffaf0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 0 #a87f4910; }
-    .panel-content { padding: 16px; }
-    .section-label { display: flex; align-items: center; gap: 9px; color: var(--deep); font-size: 18px; font-weight: 900; margin: 0 0 15px; }
-    .section-label::before { content: ""; width: 5px; height: 22px; border-radius: 5px; background: var(--red); }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 16px 8px; gap: 5px; }
-    .stat { text-align: center; border-right: 1px dashed #d9c49f; }
-    .stat:last-child { border-right: 0; }
-    .stat-value { display: block; font-size: clamp(23px, 7vw, 31px); color: var(--deep); font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums; }
-    .stat-label { display: block; font-size: 11px; color: #735c42; font-weight: 700; margin-top: 6px; }
-    .status { background: #e7f1e9; color: #26624e; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 750; line-height: 1.6; overflow-wrap: anywhere; }
-    .status.error { background: #f9e0d7; color: #912b24; }
-    .input-group { min-width: 0; padding: 12px; border: 1px solid #ead8b7; border-radius: 11px; background: #fff8ea; }
-    .input-group + .input-group { margin-top: 15px; }
-    .input-group.optional { background: #f8f4ea; border-color: #e4dacc; }
-    .input-group-title { margin: 0; display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 900; color: var(--deep); }
-    .input-group.optional .input-group-title { color: #5d5b4b; }
-    .group-kind { display: inline-block; flex: 0 0 auto; border-radius: 5px; font-size: 11px; font-weight: 900; padding: 4px 7px; }
-    .group-kind.required { color: #fff; background: var(--red); }
-    .group-kind.optional { color: #596354; background: #e6e9df; }
-    .group-hint { font-size: 12px; line-height: 1.6; color: #7c674d; margin: 7px 0 14px; }
-    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .field { display: block; min-width: 0; font-size: 12px; font-weight: 800; color: #685138; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #fff8eb;
+      border-bottom: 1px solid #e9decf;
+    }
+    .topbar-inner {
+      min-height: 57px;
+      padding: 7px 15px;
+      display: grid;
+      grid-template-columns: 61px 1fr 61px;
+      align-items: center;
+      gap: 5px;
+    }
+    .topbar-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      background: #f9ead4;
+      font-size: 22px;
+    }
+    h1 { margin: 0; text-align: center; font-size: 16px; font-weight: 850; letter-spacing: .025em; color: var(--ink); }
+    .save-button {
+      border: 0;
+      border-radius: 9px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 850;
+      padding: 9px 4px;
+      min-height: 36px;
+    }
+    .save-button:not(:disabled):active { background: var(--orange-deep); }
+    main { padding: 0 15px; }
+    .intro { margin: 16px 2px 8px; font-size: 11px; color: var(--muted); font-weight: 650; }
+    #record-form { scroll-margin-top: 79px; }
+    .input-group { min-width: 0; padding: 0 1px; }
+    .input-group + .input-group {
+      margin-top: 18px;
+      padding-top: 17px;
+      border-top: 1px solid var(--line);
+    }
+    .input-group-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0 0 11px;
+      font-weight: 850;
+      color: #595145;
+    }
+    .group-kind {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 850;
+      padding: 3px 7px;
+      letter-spacing: .03em;
+    }
+    .group-kind.required { background: #f4e0ca; color: #99521b; }
+    .group-kind.optional { background: #eeece6; color: #6f6960; }
+    .group-hint { margin: -5px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+    .field { display: block; min-width: 0; font-size: 12px; color: #3a352e; font-weight: 800; line-height: 1.45; }
     .field.full { grid-column: 1 / -1; }
     .field input, .field select, .field textarea {
-      display: block; width: 100%; min-width: 0; margin-top: 5px; padding: 11px 10px;
-      border: 1px solid #ccb891; border-radius: 9px; background: #fff; color: var(--ink); font-size: 16px;
+      display: block;
+      width: 100%;
+      min-width: 0;
+      min-height: 43px;
+      margin-top: 5px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: var(--field);
+      border: 1px solid #d9cec0;
+      border-radius: 9px;
+      box-shadow: 0 1px 2px #6d58340a;
+      font-size: 16px;
+      line-height: 1.4;
     }
-    .field textarea { min-height: 86px; line-height: 1.6; resize: vertical; }
-    .field input::placeholder, .field textarea::placeholder { color: #a99479; }
-    .favorite-check { display: flex; gap: 9px; align-items: center; border: 1px solid #ddc7a5; border-radius: 10px; background: #fff3d7; padding: 12px; font-size: 13px; font-weight: 800; color: #7a3a2d; margin-top: 13px; }
-    .favorite-check input { width: 19px; height: 19px; accent-color: var(--red); margin: 0; }
-    .buttons { display: flex; gap: 9px; margin-top: 14px; }
-    .primary, .secondary { min-height: 47px; padding: 10px 12px; border: 0; border-radius: 10px; font-weight: 850; font-size: 14px; }
-    .primary { flex: 1; background: var(--red); color: #fff9e9; }
-    .secondary { flex: 0 0 auto; background: #ebdfc8; color: var(--deep); }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: #d98c45;
+      box-shadow: 0 0 0 2px #e9b98433;
+      outline: none;
+    }
+    .field input::placeholder, .field textarea::placeholder { color: #a89d90; }
+    .field textarea { min-height: 90px; resize: vertical; }
+    .field select { padding-right: 3px; font-size: 13px; }
+    .favorite-check {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 13px;
+      margin-top: 13px;
+      background: #fff1d8;
+      border: 1px solid #f0d8b0;
+      border-radius: 9px;
+      color: #8b5425;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+    .favorite-check input { width: 18px; height: 18px; flex: 0 0 auto; margin: 0; accent-color: var(--orange-deep); }
+    .buttons { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .secondary {
+      min-height: 40px;
+      border: 1px solid #e2d6c8;
+      border-radius: 8px;
+      padding: 8px 13px;
+      background: #fff;
+      color: #7b6251;
+      font-size: 12px;
+      font-weight: 800;
+    }
     .hidden { display: none !important; }
-    .helper { color: #8c7355; font-size: 11px; line-height: 1.7; margin: 11px 1px 0; }
-    .filters { display: grid; grid-template-columns: 1fr auto; gap: 9px; }
-    .filters input[type="search"] { min-width: 0; width: 100%; border: 1px solid #ceb990; border-radius: 10px; padding: 10px 12px; font-size: 16px; background: #fff; }
-    .filters select { border: 1px solid #ceb990; border-radius: 10px; padding: 9px; font-size: 13px; background: #fff; color: var(--ink); }
-    .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 4px; }
-    .filter-row label { display: flex; gap: 7px; align-items: center; font-size: 12px; font-weight: 800; color: #79512d; }
-    .filter-row input { width: 17px; height: 17px; margin: 0; accent-color: var(--red); }
-    .result-count { color: #876c4e; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
-    .records { display: grid; gap: 12px; margin-top: 12px; }
-    .record { border: 1px solid #e1d2b7; border-radius: 12px; background: #fff; overflow: hidden; }
-    .record-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; border-bottom: 1px dashed #eee0c9; padding: 13px 13px 10px; }
-    .shop-title { font-size: 18px; font-weight: 900; margin: 0; overflow-wrap: anywhere; color: var(--deep); }
-    .shop-area { margin: 5px 0 0; font-size: 12px; color: #806b51; overflow-wrap: anywhere; }
-    .date-chip { flex: 0 0 auto; font-size: 11px; background: #f8ead1; color: #725131; padding: 5px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; }
-    .record-body { padding: 12px 13px 9px; }
-    .dish-name { font-size: 16px; margin: 0 0 8px; font-weight: 850; overflow-wrap: anywhere; }
-    .detail-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .chip { border-radius: 7px; padding: 5px 8px; background: #f4f1e9; color: #67583f; font-size: 12px; font-weight: 700; }
-    .chip.star { background: #fff1cd; color: #996019; letter-spacing: .01em; }
-    .chip.want { background: #fbe3dc; color: #a32e27; }
-    .memo { font-size: 13px; line-height: 1.7; margin: 11px 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; color: #6a5842; }
-    .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid #eee4d4; }
-    .card-actions button { border: 0; min-width: 0; padding: 11px 4px; background: #fffaf1; color: #765039; font-size: 12px; font-weight: 800; border-right: 1px solid #eee4d4; }
-    .card-actions button:last-child { border-right: 0; color: #a72e28; }
-    .card-actions button.active { color: #b33429; background: #fff1e9; }
-    .empty { padding: 26px 10px 18px; color: #7e674c; font-size: 13px; text-align: center; line-height: 1.8; }
-    footer { padding: 19px 16px 0; text-align: center; color: #8d7759; font-size: 11px; line-height: 1.6; }
-    @media (max-width: 355px) {
-      main { padding-left: 9px; padding-right: 9px; }
-      .panel-content { padding: 12px; }
-      .field-grid { gap: 9px; }
-      .input-group { padding: 10px; }
-      .input-group.optional .field { grid-column: 1 / -1; }
+    .helper { color: #958779; font-size: 11px; line-height: 1.6; margin: 13px 0 0; }
+    .status {
+      padding: 10px 11px;
+      margin: 15px 0 20px;
+      border-radius: 8px;
+      background: #edf2e9;
+      color: #48694b;
+      font-size: 12px;
+      line-height: 1.6;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .status.error { background: #fbe5df; color: #9d3129; }
+    .history {
+      border-top: 8px solid #f4ecdf;
+      padding: 19px 0 0;
+    }
+    .history-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .section-label { margin: 0 0 13px; color: var(--ink); font-size: 16px; font-weight: 850; }
+    .section-desc { margin: -5px 0 15px; font-size: 11px; color: #938475; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border: 1px solid #ede2d3;
+      border-radius: 11px;
+      background: #fff;
+      padding: 13px 3px;
+      gap: 3px;
+      margin-bottom: 16px;
+    }
+    .stat { text-align: center; border-right: 1px solid #eee6d9; }
+    .stat:last-child { border-right: none; }
+    .stat-value { display: block; font-size: 22px; font-weight: 850; color: #a8642e; font-variant-numeric: tabular-nums; }
+    .stat-label { display: block; margin-top: 3px; font-size: 10px; color: #817263; }
+    .filters { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
+    .filters input, .filters select {
+      min-width: 0;
+      min-height: 42px;
+      border: 1px solid #ddd2c3;
+      border-radius: 9px;
+      padding: 9px 11px;
+      color: var(--ink);
+      background: #fff;
+      font-size: 14px;
+    }
+    .filters select { padding: 8px; font-size: 12px; }
+    .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 11px 0 10px; }
+    .filter-row label { display: inline-flex; gap: 7px; align-items: center; color: #866445; font-size: 12px; font-weight: 750; }
+    .filter-row input { margin: 0; width: 17px; height: 17px; accent-color: var(--orange-deep); }
+    .result-count { color: #948578; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .records { display: grid; gap: 10px; }
+    .record { border: 1px solid #e8ddcf; border-radius: 10px; background: #fff; overflow: hidden; }
+    .record-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 12px 13px 9px; }
+    .shop-title { margin: 0; color: #4d4239; font-size: 15px; font-weight: 850; overflow-wrap: anywhere; }
+    .shop-area { margin: 5px 0 0; color: #867768; font-size: 12px; overflow-wrap: anywhere; }
+    .date-chip { flex: 0 0 auto; color: #8b795f; background: #f8f1e7; border-radius: 6px; padding: 5px 7px; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .record-body { padding: 0 13px 12px; }
+    .dish-name { margin: 0 0 10px; font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+    .detail-row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .chip { padding: 5px 8px; border-radius: 6px; background: #f5f2ed; color: #786b5b; font-size: 11px; font-weight: 750; }
+    .chip.star { color: #b27835; background: #fff4df; }
+    .chip.want { color: #b7683c; background: #fff0e8; }
+    .memo { margin: 10px 0 0; color: #6f6258; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .card-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #f1e9de; }
+    .card-actions button {
+      min-width: 0;
+      min-height: 43px;
+      padding: 9px 3px;
+      border: none;
+      border-right: 1px solid #f1e9de;
+      background: #fffdf9;
+      color: #7b6a5c;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .card-actions button:last-child { border-right: none; color: #a5453d; }
+    .card-actions button.active { color: #be6e3f; background: #fff5e9; }
+    .empty { padding: 16px 0 22px; color: #8b7b6b; text-align: center; font-size: 12px; line-height: 1.7; }
+    footer { padding: 23px 18px; color: #998977; text-align: center; font-size: 11px; line-height: 1.6; }
+    @media (max-width: 350px) {
+      .topbar-inner { padding-left: 10px; padding-right: 10px; }
+      main { padding: 0 11px; }
+      .field-grid { gap: 11px 8px; }
+      .field select { font-size: 12px; }
       .filters { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <div class="header-inner">
-        <div class="ornament" aria-hidden="true">🥟 ✦ 🍜 ✦ 🥢</div>
-        <p class="eyebrow">MINAPP KOBO / 町のうまい店ノート</p>
-        <h1>町中華メモ</h1>
-        <p class="subtitle">ふらっと入った、あの店の味を忘れない。</p>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <span class="topbar-mark" aria-hidden="true">🥟</span>
+        <h1 id="form-title">記録する</h1>
+        <button id="save-record" class="save-button" type="submit" form="record-form" disabled>保存</button>
       </div>
     </header>
     <main>
-      <section class="panel stats" aria-label="記録のまとめ">
-        <div class="stat"><strong id="stat-visits" class="stat-value">—</strong><span class="stat-label">食べた記録</span></div>
-        <div class="stat"><strong id="stat-shops" class="stat-value">—</strong><span class="stat-label">訪れたお店</span></div>
-        <div class="stat"><strong id="stat-favorites" class="stat-value">—</strong><span class="stat-label">また行きたい</span></div>
-      </section>
+      <p class="intro">町中華メモ　／　お気に入りの一皿を残そう</p>
+      <form id="record-form">
+        <section id="required-fields" class="input-group" aria-labelledby="required-fields-title">
+          <h3 id="required-fields-title" class="input-group-title"><span class="group-kind required">必須</span> 基本情報</h3>
+          <p class="group-hint">この3項目で記録できます。</p>
+          <div class="field-grid">
+            <label class="field full">食べた料理
+              <input id="dish" type="text" maxlength="50" placeholder="例：麻婆豆腐" autocomplete="off" required disabled>
+            </label>
+            <label class="field full">お店の名前
+              <input id="shop" type="text" maxlength="40" placeholder="例：駅前の大衆中華" autocomplete="off" required disabled>
+            </label>
+            <label class="field full">行った日
+              <input id="visited-at" type="date" min="2000-01-01" max="2099-12-31" required disabled>
+            </label>
+          </div>
+        </section>
+        <section id="optional-fields" class="input-group optional" aria-labelledby="optional-fields-title">
+          <h3 id="optional-fields-title" class="input-group-title"><span class="group-kind optional">任意</span> オプション項目</h3>
+          <p class="group-hint">空欄でもOK。満足度は変更しなければ「ふつう」になります。</p>
+          <div class="field-grid">
+            <label class="field">お会計（税込・円）
+              <input id="price" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="例：850" disabled>
+            </label>
+            <label class="field">満足度
+              <select id="rating" disabled>
+                <option value="5">★★★★★ 最高</option>
+                <option value="4">★★★★☆ おいしい</option>
+                <option value="3" selected>★★★☆☆ ふつう</option>
+                <option value="2">★★☆☆☆ もう少し</option>
+                <option value="1">★☆☆☆☆ 好みと違う</option>
+              </select>
+            </label>
+            <label class="field full">場所・最寄り駅
+              <input id="area" type="text" maxlength="50" placeholder="例：高円寺" disabled>
+            </label>
+            <label class="field full">ひとことメモ
+              <textarea id="note" maxlength="140" placeholder="料理の感想や、お店の雰囲気など" disabled></textarea>
+            </label>
+          </div>
+          <label class="favorite-check"><input id="favorite" type="checkbox" disabled>♡ また行きたいお店</label>
+        </section>
+        <div class="buttons">
+          <button type="button" id="cancel-edit" class="secondary hidden" disabled>編集をやめる</button>
+        </div>
+      </form>
+      <p class="helper">記録は本人専用です。保存ボタンから追加・更新できます。</p>
       <p id="status" class="status" role="status" aria-live="polite">個人の記録を読み込み中…</p>
-      <section class="panel">
-        <div class="panel-content">
-          <h2 id="form-title" class="section-label">一皿を記録する</h2>
-          <form id="record-form">
-            <section id="required-fields" class="input-group" aria-labelledby="required-fields-title">
-              <h3 id="required-fields-title" class="input-group-title"><span class="group-kind required">必須</span> まずはこの3つ</h3>
-              <p class="group-hint">お店・日付・料理だけ入力すれば記録できます。</p>
-              <div class="field-grid">
-                <label class="field full">お店の名前
-                  <input id="shop" type="text" maxlength="40" placeholder="例：駅前の大衆中華" autocomplete="off" required disabled>
-                </label>
-                <label class="field full">行った日
-                  <input id="visited-at" type="date" min="2000-01-01" max="2099-12-31" required disabled>
-                </label>
-                <label class="field full">食べた料理
-                  <input id="dish" type="text" maxlength="50" placeholder="例：麻婆豆腐" autocomplete="off" required disabled>
-                </label>
-              </div>
-            </section>
-            <section id="optional-fields" class="input-group optional" aria-labelledby="optional-fields-title">
-              <h3 id="optional-fields-title" class="input-group-title"><span class="group-kind optional">任意</span> オプション項目</h3>
-              <p class="group-hint">空欄でもOK。満足度は変更しなければ「ふつう」になります。</p>
-              <div class="field-grid">
-                <label class="field full">場所・最寄り駅
-                  <input id="area" type="text" maxlength="50" placeholder="例：高円寺" disabled>
-                </label>
-                <label class="field">お会計（円）
-                  <input id="price" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="例：850" disabled>
-                </label>
-                <label class="field">満足度
-                  <select id="rating" disabled>
-                    <option value="5">★★★★★ 最高</option>
-                    <option value="4">★★★★☆ おいしい</option>
-                    <option value="3" selected>★★★☆☆ ふつう</option>
-                    <option value="2">★★☆☆☆ もう少し</option>
-                    <option value="1">★☆☆☆☆ 好みと違う</option>
-                  </select>
-                </label>
-                <label class="field full">ひとことメモ
-                  <textarea id="note" maxlength="140" placeholder="例：香りがよくてご飯が進む。お昼は並ぶかも。" disabled></textarea>
-                </label>
-              </div>
-              <label class="favorite-check"><input id="favorite" type="checkbox" disabled>♡ また行きたいお店</label>
-            </section>
-            <div class="buttons">
-              <button type="submit" id="save-record" class="primary" disabled>＋ この一皿を保存</button>
-              <button type="button" id="cancel-edit" class="secondary hidden" disabled>編集をやめる</button>
-            </div>
-          </form>
-          <p class="helper">記録は本人だけに保存されます。食べた日ごとに同じお店を何度でも登録できます。</p>
+      <section class="history" aria-labelledby="history-title">
+        <div class="history-header"><h2 id="history-title" class="section-label">食べ歩きノート</h2></div>
+        <p class="section-desc">記録の検索、編集、削除はこちらから。</p>
+        <div class="stats" aria-label="記録のまとめ">
+          <div class="stat"><strong id="stat-visits" class="stat-value">—</strong><span class="stat-label">食べた記録</span></div>
+          <div class="stat"><strong id="stat-shops" class="stat-value">—</strong><span class="stat-label">訪れたお店</span></div>
+          <div class="stat"><strong id="stat-favorites" class="stat-value">—</strong><span class="stat-label">また行きたい</span></div>
         </div>
-      </section>
-      <section class="panel">
-        <div class="panel-content">
-          <h2 class="section-label">おいしい記録をめくる</h2>
-          <div class="filters">
-            <input id="search" type="search" placeholder="店名・場所・料理で探す" aria-label="記録を検索" disabled>
-            <select id="sort" aria-label="並び順" disabled>
-              <option value="recent">新しい順</option>
-              <option value="rating">評価が高い順</option>
-            </select>
-          </div>
-          <div class="filter-row">
-            <label><input id="favorites-only" type="checkbox" disabled>♡ また行きたいだけ</label>
-            <span id="result-count" class="result-count"></span>
-          </div>
-          <div id="records" class="records" aria-live="polite"></div>
-          <p id="no-records" class="empty">まだ記録がありません。最初の一皿を書いてみよう。</p>
+        <div class="filters">
+          <input id="search" type="search" placeholder="店名・場所・料理で探す" aria-label="記録を検索" disabled>
+          <select id="sort" aria-label="並び順" disabled>
+            <option value="recent">新しい順</option>
+            <option value="rating">評価が高い順</option>
+          </select>
         </div>
+        <div class="filter-row">
+          <label><input id="favorites-only" type="checkbox" disabled>♡ また行きたいだけ</label>
+          <span id="result-count" class="result-count"></span>
+        </div>
+        <div id="records" class="records" aria-live="polite"></div>
+        <p id="no-records" class="empty">まだ記録がありません。最初の一皿を書いてみよう。</p>
       </section>
     </main>
-    <footer>記録はみんアプ工房の個人用保存APIに保存されます。<br>気になる店の味を、少しずつ集めよう。</footer>
+    <footer>みんアプ工房の個人用保存APIに保存します。</footer>
   </div>
   <script src="memo.js"></script>
   <script src="app.js"></script>

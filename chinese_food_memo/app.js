@@ -92,8 +92,8 @@
     form.reset();
     fields.visitedAt.value = todayLocal();
     fields.rating.value = '3';
-    formTitle.textContent = '一皿を記録する';
-    saveButton.textContent = '＋ この一皿を保存';
+    formTitle.textContent = '記録する';
+    saveButton.textContent = '保存';
     cancelButton.classList.add('hidden');
     enabled();
   }
@@ -154,8 +154,8 @@
       if (!slots || busy || stopped) return;
       editingId = entry.id;
       setDraft(entry);
-      formTitle.textContent = '記録を編集する';
-      saveButton.textContent = '変更を保存する';
+      formTitle.textContent = '記録を編集';
+      saveButton.textContent = '更新';
       cancelButton.classList.remove('hidden');
       enabled();
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
