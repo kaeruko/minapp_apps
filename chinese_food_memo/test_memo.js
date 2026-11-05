@@ -1,5 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const M = require('./memo.js');
 
 const A = '11111111-1111-4111-8111-111111111111';
@@ -88,4 +90,17 @@ assert.throws(() => M.add(maxed, entry('ffffffff-ffff-4fff-8fff-ffffffffffff')),
 for (const slot of maxed) {
   assert.ok(new TextEncoder().encode(JSON.stringify(slot)).length <= M.MAX_SLOT_BYTES);
 }
+
+const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+const mapsConfig = fs.readFileSync(path.join(__dirname, 'maps-config.js'), 'utf8');
+assert.equal((html.match(/class="nav-button/g) || []).length, 4);
+assert.equal((html.match(/referrerpolicy="strict-origin-when-cross-origin"/g) || []).length, 2);
+assert.ok(html.includes('id="map-frame"'));
+assert.ok(html.includes('id="map-frame-large"'));
+assert.ok(html.indexOf('src="memo.js"') < html.indexOf('src="maps-config.js"'));
+assert.ok(html.indexOf('src="maps-config.js"') < html.indexOf('src="app.js"'));
+assert.ok(app.includes('https://www.google.com/maps/embed/v1/search?'));
+assert.equal((mapsConfig.match(/__KOBO_GOOGLE_MAPS_API_KEY__/g) || []).length, 1);
+assert.equal(/AIza[0-9A-Za-z_-]{30,60}/.test(mapsConfig), false, 'real API key must not be committed');
 console.log('chinese_food_memo: all memo domain tests passed');

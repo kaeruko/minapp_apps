@@ -16,6 +16,7 @@
       "files": [
         "index.html",
         "app.js",
+        "maps-config.js",
         "memo.js",
         "minapp-package.json"
       ],

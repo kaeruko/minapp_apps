@@ -22,6 +22,8 @@ REGISTRY = ROOT / "deploy/kobo/apps.json"
 HEX32 = re.compile(r"[0-9a-f]{32}\Z")
 ALLOWED_SUFFIXES = {".html", ".css", ".js", ".mjs", ".json", ".txt", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".mp3", ".m4a", ".ogg", ".wav"}
 ZIP_LIMIT = 2 * 1024 * 1024
+MAPS_API_KEY_PLACEHOLDER = b"__KOBO_GOOGLE_MAPS_API_KEY__"
+MAPS_API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{30,60}\Z")
 
 
 def require_keys(value: object, expected: set[str], name: str) -> dict:
@@ -70,7 +72,20 @@ def parse_registry(path: Path = REGISTRY) -> dict:
     return apps
 
 
-def build_zip(app: str, files: list[str]) -> bytes:
+def require_maps_api_key(environment: dict[str, str]) -> str:
+    value = environment.get("KOBO_GOOGLE_MAPS_API_KEY")
+    if value is None or not value:
+        raise ValueError("Missing required GitHub Actions secret: KOBO_GOOGLE_MAPS_API_KEY")
+    if value != value.strip() or MAPS_API_KEY_PATTERN.fullmatch(value) is None:
+        raise ValueError("KOBO_GOOGLE_MAPS_API_KEY has an invalid format")
+    return value
+
+
+def build_zip(app: str, files: list[str], *, maps_api_key: str | None = None) -> bytes:
+    if maps_api_key is not None and app != "chinese_food_memo":
+        raise ValueError("Google Maps API key injection is only supported for chinese_food_memo")
+    if maps_api_key is not None and MAPS_API_KEY_PATTERN.fullmatch(maps_api_key) is None:
+        raise ValueError("Google Maps API key has an invalid format")
     if (ROOT / app).is_symlink():
         raise ValueError(f"App directory must not be a symlink: {app}")
     app_root = (ROOT / app).resolve(strict=True)
@@ -82,6 +97,11 @@ def build_zip(app: str, files: list[str]) -> bytes:
             if not path.is_file() or path.is_symlink() or not path.resolve(strict=True).is_relative_to(app_root):
                 raise ValueError(f"Missing, symlinked or escaped asset: {app}/{name}")
             content = path.read_bytes()
+            if app == "chinese_food_memo" and name == "maps-config.js":
+                if content.count(MAPS_API_KEY_PLACEHOLDER) != 1:
+                    raise ValueError("chinese_food_memo/maps-config.js must contain exactly one API key placeholder")
+                if maps_api_key is not None:
+                    content = content.replace(MAPS_API_KEY_PLACEHOLDER, maps_api_key.encode("ascii"))
             total += len(content)
             if len(content) > 4 * 1024 * 1024 or total > 8 * 1024 * 1024:
                 raise ValueError(f"ZIP uncompressed size exceeds Hosted limit: {app}")
@@ -269,7 +289,10 @@ def main() -> None:
     apps = parse_registry()
     if args.app not in apps:
         parser.error(f"Unregistered Kobo app: {args.app}")
-    payload = build_zip(args.app, apps[args.app]["files"])
+    maps_api_key = None
+    if args.publish and args.app == "chinese_food_memo":
+        maps_api_key = require_maps_api_key(os.environ)
+    payload = build_zip(args.app, apps[args.app]["files"], maps_api_key=maps_api_key)
     print(f"{args.app}: package OK ({len(payload)} bytes, SHA-256 {hashlib.sha256(payload).hexdigest()})")
     if args.check:
         return

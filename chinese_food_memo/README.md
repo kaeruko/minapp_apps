@@ -9,6 +9,7 @@
 - 記録を編集、削除、「また行きたい」の切り替え
 - 店名・場所・料理・メモから検索、また行きたいだけ表示、日付順・評価順に並び替え
 - 訪問回数、訪れた店舗数、また行きたい件数の集計
+- Google Maps Embed APIで町中華を検索し、保存済みの店を地図で開く
 
 ひと皿単位の記録なので、同じ店の複数回の訪問も残せます。サンプルデータは保存しません。
 
@@ -24,7 +25,7 @@
 
 ## 配布・テスト
 
-`index.html`・`app.js`・`memo.js`・`minapp-package.json` が工房への配布対象です。
+`index.html`・`app.js`・`maps-config.js`・`memo.js`・`minapp-package.json` が工房への配布対象です。`maps-config.js` のプレースホルダーは公開時だけGitHub Actions Secret `KOBO_GOOGLE_MAPS_API_KEY` で置換します。実キーはリポジトリへ保存しません。
 
 ```sh
 node chinese_food_memo/test_memo.js

@@ -19,6 +19,7 @@ spec.loader.exec_module(publisher)
 GROUP = "a" * 32
 APP = "b" * 32
 TITLE = "晩酌予算"
+MAPS_KEY = "AIza" + "A" * 35
 
 
 class PublisherTests(unittest.TestCase):
@@ -31,6 +32,16 @@ class PublisherTests(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(chinese)) as archive:
             self.assertEqual(set(archive.namelist()), set(registry["chinese_food_memo"]["files"]))
             self.assertNotIn("test_memo.js", archive.namelist())
+            self.assertIn(publisher.MAPS_API_KEY_PLACEHOLDER, archive.read("maps-config.js"))
+        published_chinese = publisher.build_zip(
+            "chinese_food_memo",
+            registry["chinese_food_memo"]["files"],
+            maps_api_key=MAPS_KEY,
+        )
+        with zipfile.ZipFile(io.BytesIO(published_chinese)) as archive:
+            config = archive.read("maps-config.js")
+            self.assertIn(MAPS_KEY.encode("ascii"), config)
+            self.assertNotIn(publisher.MAPS_API_KEY_PLACEHOLDER, config)
         self.assertEqual(content, publisher.build_zip("drink_budget", registry["drink_budget"]["files"]))
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
             self.assertEqual(set(zf.namelist()), set(registry["drink_budget"]["files"]))
@@ -50,6 +61,14 @@ class PublisherTests(unittest.TestCase):
             })
         with self.assertRaisesRegex(ValueError, "HTTPS public origin"):
             publisher.require_origin("http://localhost:8000")
+        with self.assertRaisesRegex(ValueError, "KOBO_GOOGLE_MAPS_API_KEY"):
+            publisher.require_maps_api_key({})
+        with self.assertRaisesRegex(ValueError, "invalid format"):
+            publisher.require_maps_api_key({"KOBO_GOOGLE_MAPS_API_KEY": "not-a-key"})
+        self.assertEqual(
+            publisher.require_maps_api_key({"KOBO_GOOGLE_MAPS_API_KEY": MAPS_KEY}),
+            MAPS_KEY,
+        )
 
     def test_invalid_registry_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -43,6 +43,9 @@ jobs:
         run: |
           node --check "${{ matrix.app }}/app.js"
           node --check "${{ matrix.app }}/${{ matrix.core }}"
+          if [ -f "${{ matrix.app }}/maps-config.js" ]; then
+            node --check "${{ matrix.app }}/maps-config.js"
+          fi
           node "${{ matrix.app }}/${{ matrix.test }}"
           python -m unittest discover -s deploy/kobo -p 'test_*.py' -v
           python deploy/kobo/publish.py --app "${{ matrix.app }}" --check
@@ -55,4 +58,5 @@ jobs:
           KOBO_LOGIN_ID: ${{ secrets.KOBO_LOGIN_ID }}
           KOBO_PASSWORD: ${{ secrets.KOBO_PASSWORD }}
           KOBO_GROUP_ID: ${{ secrets.KOBO_GROUP_ID }}
+          KOBO_GOOGLE_MAPS_API_KEY: ${{ secrets.KOBO_GOOGLE_MAPS_API_KEY }}
         run: python deploy/kobo/publish.py --app "${{ matrix.app }}" --publish

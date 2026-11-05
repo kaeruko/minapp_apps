@@ -43,13 +43,16 @@ class FormGroups(HTMLParser):
 
 
 class FormLayoutTests(unittest.TestCase):
-    def test_top_save_button_targets_the_existing_form(self):
+    def test_navigation_map_and_save_form_are_present(self):
         source = HTML_FILE.read_text(encoding="utf-8")
-        self.assertIn('<h1 id="form-title">記録する</h1>', source)
-        self.assertIn('id="save-record" class="save-button" type="submit" form="record-form"', source)
+        self.assertIn('id="form-title" class="page-title"', source)
+        self.assertIn('type="submit" id="save-record" class="primary"', source)
         self.assertEqual(source.count('id="record-form"'), 1)
         self.assertEqual(source.count('id="save-record"'), 1)
-        self.assertIn('id="history-title"', source)
+        self.assertEqual(source.count('class="nav-button'), 4)
+        self.assertEqual(source.count('referrerpolicy="strict-origin-when-cross-origin"'), 2)
+        self.assertIn('id="map-frame"', source)
+        self.assertIn('id="map-frame-large"', source)
         self.assertNotIn('写真を追加', source)
 
     def test_required_vs_optional_controls(self):

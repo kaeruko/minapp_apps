@@ -4,7 +4,7 @@
 
 ## 初回設定（リポジトリ管理者が一度だけ実施）
 
-GitHubの `kaeruko/minapp_apps` → **Settings → Secrets and variables → Actions → Repository secrets** に、次の4つを登録してください。
+GitHubの `kaeruko/minapp_apps` → **Settings → Secrets and variables → Actions → Repository secrets** に、次の5つを登録してください。
 
 | Secret | 内容 |
 | --- | --- |
@@ -12,6 +12,7 @@ GitHubの `kaeruko/minapp_apps` → **Settings → Secrets and variables → Act
 | `KOBO_LOGIN_ID` | 工房に登録済みの、公開専用アカウントのログインID |
 | `KOBO_PASSWORD` | 上記アカウントのパスワード |
 | `KOBO_GROUP_ID` | そのアカウントが参加している、公開先グループの32桁のID |
+| `KOBO_GOOGLE_MAPS_API_KEY` | 町中華メモ専用。工房APIオリジンにウェブサイト制限し、Maps Embed APIだけを許可したキー |
 
 公開専用アカウントを使い、誰かの個人ログイン情報は登録しないでください。初回のアカウント・グループ登録は工房上で行います。APIへの接続先が未設定、認証できない、参加グループが不一致の場合は処理を止めます。**Secretsがない間は自動公開されません**。GitHubコネクタからSecretsを代理設定する処理はありません。
 
