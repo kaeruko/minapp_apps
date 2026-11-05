@@ -46,6 +46,15 @@
     .stat-label { display: block; font-size: 11px; color: #735c42; font-weight: 700; margin-top: 6px; }
     .status { background: #e7f1e9; color: #26624e; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 750; line-height: 1.6; overflow-wrap: anywhere; }
     .status.error { background: #f9e0d7; color: #912b24; }
+    .input-group { min-width: 0; padding: 12px; border: 1px solid #ead8b7; border-radius: 11px; background: #fff8ea; }
+    .input-group + .input-group { margin-top: 15px; }
+    .input-group.optional { background: #f8f4ea; border-color: #e4dacc; }
+    .input-group-title { margin: 0; display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 900; color: var(--deep); }
+    .input-group.optional .input-group-title { color: #5d5b4b; }
+    .group-kind { display: inline-block; flex: 0 0 auto; border-radius: 5px; font-size: 11px; font-weight: 900; padding: 4px 7px; }
+    .group-kind.required { color: #fff; background: var(--red); }
+    .group-kind.optional { color: #596354; background: #e6e9df; }
+    .group-hint { font-size: 12px; line-height: 1.6; color: #7c674d; margin: 7px 0 14px; }
     .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .field { display: block; min-width: 0; font-size: 12px; font-weight: 800; color: #685138; }
     .field.full { grid-column: 1 / -1; }
@@ -93,6 +102,8 @@
       main { padding-left: 9px; padding-right: 9px; }
       .panel-content { padding: 12px; }
       .field-grid { gap: 9px; }
+      .input-group { padding: 10px; }
+      .input-group.optional .field { grid-column: 1 / -1; }
       .filters { grid-template-columns: 1fr; }
     }
   </style>
@@ -118,36 +129,46 @@
         <div class="panel-content">
           <h2 id="form-title" class="section-label">一皿を記録する</h2>
           <form id="record-form">
-            <div class="field-grid">
-              <label class="field full">お店の名前
-                <input id="shop" type="text" maxlength="40" placeholder="例：駅前の大衆中華" autocomplete="off" required disabled>
-              </label>
-              <label class="field">場所・最寄り駅
-                <input id="area" type="text" maxlength="50" placeholder="例：高円寺" disabled>
-              </label>
-              <label class="field">行った日
-                <input id="visited-at" type="date" min="2000-01-01" max="2099-12-31" required disabled>
-              </label>
-              <label class="field full">食べた料理
-                <input id="dish" type="text" maxlength="50" placeholder="例：麻婆豆腐" autocomplete="off" required disabled>
-              </label>
-              <label class="field">お会計（円・任意）
-                <input id="price" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="例：850" disabled>
-              </label>
-              <label class="field">満足度
-                <select id="rating" required disabled>
-                  <option value="5">★★★★★ 最高</option>
-                  <option value="4">★★★★☆ おいしい</option>
-                  <option value="3" selected>★★★☆☆ ふつう</option>
-                  <option value="2">★★☆☆☆ もう少し</option>
-                  <option value="1">★☆☆☆☆ 好みと違う</option>
-                </select>
-              </label>
-              <label class="field full">ひとことメモ
-                <textarea id="note" maxlength="140" placeholder="例：香りがよくてご飯が進む。お昼は並ぶかも。" disabled></textarea>
-              </label>
-            </div>
-            <label class="favorite-check"><input id="favorite" type="checkbox" disabled>♡ また行きたいお店</label>
+            <section id="required-fields" class="input-group" aria-labelledby="required-fields-title">
+              <h3 id="required-fields-title" class="input-group-title"><span class="group-kind required">必須</span> まずはこの3つ</h3>
+              <p class="group-hint">お店・日付・料理だけ入力すれば記録できます。</p>
+              <div class="field-grid">
+                <label class="field full">お店の名前
+                  <input id="shop" type="text" maxlength="40" placeholder="例：駅前の大衆中華" autocomplete="off" required disabled>
+                </label>
+                <label class="field full">行った日
+                  <input id="visited-at" type="date" min="2000-01-01" max="2099-12-31" required disabled>
+                </label>
+                <label class="field full">食べた料理
+                  <input id="dish" type="text" maxlength="50" placeholder="例：麻婆豆腐" autocomplete="off" required disabled>
+                </label>
+              </div>
+            </section>
+            <section id="optional-fields" class="input-group optional" aria-labelledby="optional-fields-title">
+              <h3 id="optional-fields-title" class="input-group-title"><span class="group-kind optional">任意</span> オプション項目</h3>
+              <p class="group-hint">空欄でもOK。満足度は変更しなければ「ふつう」になります。</p>
+              <div class="field-grid">
+                <label class="field full">場所・最寄り駅
+                  <input id="area" type="text" maxlength="50" placeholder="例：高円寺" disabled>
+                </label>
+                <label class="field">お会計（円）
+                  <input id="price" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="例：850" disabled>
+                </label>
+                <label class="field">満足度
+                  <select id="rating" disabled>
+                    <option value="5">★★★★★ 最高</option>
+                    <option value="4">★★★★☆ おいしい</option>
+                    <option value="3" selected>★★★☆☆ ふつう</option>
+                    <option value="2">★★☆☆☆ もう少し</option>
+                    <option value="1">★☆☆☆☆ 好みと違う</option>
+                  </select>
+                </label>
+                <label class="field full">ひとことメモ
+                  <textarea id="note" maxlength="140" placeholder="例：香りがよくてご飯が進む。お昼は並ぶかも。" disabled></textarea>
+                </label>
+              </div>
+              <label class="favorite-check"><input id="favorite" type="checkbox" disabled>♡ また行きたいお店</label>
+            </section>
             <div class="buttons">
               <button type="submit" id="save-record" class="primary" disabled>＋ この一皿を保存</button>
               <button type="button" id="cancel-edit" class="secondary hidden" disabled>編集をやめる</button>

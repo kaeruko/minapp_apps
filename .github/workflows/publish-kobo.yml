@@ -46,6 +46,9 @@ jobs:
           node "${{ matrix.app }}/${{ matrix.test }}"
           python -m unittest discover -s deploy/kobo -p 'test_*.py' -v
           python deploy/kobo/publish.py --app "${{ matrix.app }}" --check
+      - name: Test required and optional form fields
+        if: matrix.app == 'chinese_food_memo'
+        run: python -m unittest discover -s chinese_food_memo -p 'test_*.py' -v
       - name: Publish ${{ matrix.app }} to みんアプ工房
         env:
           KOBO_API_BASE_URL: ${{ secrets.KOBO_API_BASE_URL }}
