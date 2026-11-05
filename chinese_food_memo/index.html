@@ -14,7 +14,7 @@
       --shadow: 0 5px 0 rgb(69 49 24 / 10%);
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
+    html, body { width: 100%; max-width: 100%; margin: 0; min-height: 100%; overflow-x: hidden; }
     body {
       min-height: 100dvh;
       background: radial-gradient(circle at 18% 3%, rgb(255 255 255 / 55%), transparent 31%),
@@ -24,7 +24,7 @@
     button { cursor: pointer; }
     button:disabled, input:disabled, select:disabled, textarea:disabled { opacity: .53; cursor: not-allowed; }
     :is(button, input, select, textarea):focus-visible { outline: 3px solid #e6a72f; outline-offset: 2px; }
-    .app { width: min(100%, 600px); min-height: 100dvh; margin: 0 auto; background: #f7efd9; padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+    .app { width: 100%; max-width: 600px; min-height: 100dvh; margin: 0 auto; background: #f7efd9; padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
     .topbar {
       position: sticky; top: 0; z-index: 20; min-height: 62px;
       padding: max(10px, env(safe-area-inset-top)) 15px 10px;
@@ -108,7 +108,7 @@
     .primary { flex: 1; color: #fff9e9; background: var(--red); }
     .secondary { color: var(--green); background: #e9ddc4; }
     .helper { margin: 11px 1px 0; color: #826d51; font-size: 10px; line-height: 1.7; }
-    .bottom-nav { position: fixed; z-index: 30; left: 50%; bottom: 0; width: min(100%, 600px); transform: translateX(-50%); display: grid; grid-template-columns: repeat(4, 1fr); padding: 7px 5px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid #d2b46f; background: var(--green); box-shadow: 0 -3px 12px rgb(41 27 10 / 18%); }
+    .bottom-nav { position: fixed; z-index: 30; left: 50%; bottom: 0; width: 100%; max-width: 600px; transform: translateX(-50%); display: grid; grid-template-columns: repeat(4, 1fr); padding: 7px 5px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid #d2b46f; background: var(--green); box-shadow: 0 -3px 12px rgb(41 27 10 / 18%); }
     .nav-button { min-width: 0; min-height: 54px; padding: 5px 2px; border: 0; border-radius: 9px; color: #d9d3bc; background: transparent; font-size: 10px; font-weight: 800; }
     .nav-button span { display: block; margin-bottom: 3px; font-size: 20px; line-height: 1; }
     .nav-button.active { color: #fff6d7; background: rgb(255 255 255 / 12%); }
