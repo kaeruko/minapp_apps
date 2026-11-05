@@ -55,6 +55,17 @@ class FormLayoutTests(unittest.TestCase):
         self.assertIn('id="map-frame-large"', source)
         self.assertNotIn('写真を追加', source)
 
+    def test_mobile_width_does_not_default_to_desktop_size(self):
+        source = HTML_FILE.read_text(encoding="utf-8")
+        self.assertIn('name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"', source)
+        self.assertIn(
+            'html, body { width: 100%; max-width: 100%; margin: 0; min-height: 100%; overflow-x: hidden; }',
+            source,
+        )
+        self.assertIn('.app { width: 100%; max-width: 600px;', source)
+        self.assertIn('left: 50%; bottom: 0; width: 100%; max-width: 600px;', source)
+        self.assertIn('.map-frame { display: block; width: 100%;', source)
+
     def test_required_vs_optional_controls(self):
         source = HTML_FILE.read_text(encoding="utf-8")
         parser = FormGroups()
