@@ -1,6 +1,8 @@
 'use strict';
 const assert = require('node:assert/strict');
 const B = require('./budget.js');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const original = B.newState();
 assert.deepEqual(original, { version: 1, monthlyBudget: null, visitCost: 2000, expenses: [] });
@@ -33,4 +35,31 @@ assert.throws(() => B.validate({ ...configured, unexpected: 1 }), /fields/);
 assert.throws(() => B.validate({ ...configured, expenses: [a, a] }), /duplicate/);
 assert.throws(() => B.addExpense(configured, { ...a, amount: 1.5 }), /integer/);
 assert.throws(() => B.addExpense(configured, { ...a, note: 'x'.repeat(41) }), /note/);
-console.log('drink_budget: all budget domain tests passed');
+// Navigation and visualization contract of the packaged WebView UI.
+const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const appScript = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+for (const id of [
+  'status', 'month', 'current-month', 'visits', 'budget-total',
+  'spent-total', 'remaining-total', 'estimate', 'progress', 'progress-fill',
+  'budget-ring', 'ring-remaining', 'ring-caption',
+  'history-month', 'expense-list', 'no-expenses',
+  'settings-form', 'monthly-budget', 'visit-cost', 'save-settings',
+  'expense-form', 'spent-date', 'spent-amount', 'spent-note', 'add-expense'
+]) {
+  assert.ok(html.includes('id="' + id + '"'), 'required runtime element is absent: ' + id);
+}
+const pageNames = [...html.matchAll(/data-page="([^"]+)"/g)].map(x => x[1]);
+const navigation = [...html.matchAll(/class="nav-button(?: active)?" data-view="([^"]+)"/g)].map(x => x[1]);
+const shortcuts = [...html.matchAll(/class="shortcut" type="button" data-go="([^"]+)"/g)].map(x => x[1]);
+assert.deepEqual(pageNames, ['home', 'record', 'history', 'settings']);
+assert.deepEqual(navigation, pageNames);
+assert.deepEqual(shortcuts, ['settings', 'record', 'history', 'previous', 'current', 'next']);
+assert.match(html, /conic-gradient\(/, 'dashboard must show real usage as a ring chart');
+assert.match(html, /@media \(max-width: 360px\)/, 'compact phones must have responsive styles');
+assert.match(html, /aria-current="page"/, 'active navigation must have accessible state');
+assert.match(appScript, /setProperty\('--usage', usage \+ '%'\)/);
+assert.match(appScript, /budget-ring'\)\.classList\.toggle\('over', over\)/);
+assert.match(appScript, /window\.addEventListener\('minappready'/);
+assert.doesNotMatch(appScript, /setTimeout\(/, 'WebView must not fail just because bridge injection is delayed');
+
+console.log('drink_budget: all domain and UI contract tests passed');
