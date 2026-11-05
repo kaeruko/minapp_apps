@@ -21,6 +21,40 @@
         "minapp-package.json"
       ],
       "shop_visibility": "listed"
+    },
+    "lunch_roulette": {
+      "title": "昼めしルーレット",
+      "files": [
+        "index.html",
+        "app.js",
+        "roulette.js",
+        "minapp-package.json",
+        "assets/app_icon.png",
+        "assets/title_logo.png",
+        "assets/ramen_brand_icon.png",
+        "assets/background_wood_repeatable.png",
+        "assets/roulette_frame.png",
+        "assets/roulette_center.png",
+        "assets/roulette_pointer.png",
+        "assets/roulette_shadow.png",
+        "assets/mallet.png",
+        "assets/map_pin.png",
+        "assets/nav_roulette.png",
+        "assets/nav_history.png",
+        "assets/nav_store_info.png",
+        "assets/nav_settings.png",
+        "assets/food_ramen.png",
+        "assets/food_curry.png",
+        "assets/food_gyudon.png",
+        "assets/food_soba_udon.png",
+        "assets/food_teishoku.png",
+        "assets/food_chinese.png",
+        "assets/food_yoshoku.png",
+        "assets/food_burger.png",
+        "assets/food_convenience.png",
+        "assets/food_other.png"
+      ],
+      "shop_visibility": "listed"
     }
   }
 }

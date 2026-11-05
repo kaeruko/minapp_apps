@@ -6,6 +6,7 @@ on:
     paths:
       - 'drink_budget/**'
       - 'chinese_food_memo/**'
+      - 'lunch_roulette/**'
       - 'deploy/kobo/**'
       - '.github/workflows/publish-kobo.yml'
   workflow_dispatch:
@@ -31,6 +32,9 @@ jobs:
           - app: chinese_food_memo
             test: test_memo.js
             core: memo.js
+          - app: lunch_roulette
+            test: test_roulette.js
+            core: roulette.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

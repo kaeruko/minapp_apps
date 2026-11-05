@@ -27,6 +27,14 @@ class PublisherTests(unittest.TestCase):
         registry = publisher.parse_registry()
         self.assertIn("drink_budget", registry)
         self.assertIn("chinese_food_memo", registry)
+        self.assertIn("lunch_roulette", registry)
+        lunch = publisher.build_zip("lunch_roulette", registry["lunch_roulette"]["files"])
+        self.assertEqual(lunch, publisher.build_zip("lunch_roulette", registry["lunch_roulette"]["files"]))
+        with zipfile.ZipFile(io.BytesIO(lunch)) as archive:
+            self.assertEqual(set(archive.namelist()), set(registry["lunch_roulette"]["files"]))
+            self.assertIn("assets/roulette_frame.png", archive.namelist())
+            self.assertIn("assets/food_ramen.png", archive.namelist())
+            self.assertNotIn("test_roulette.js", archive.namelist())
         content = publisher.build_zip("drink_budget", registry["drink_budget"]["files"])
         chinese = publisher.build_zip("chinese_food_memo", registry["chinese_food_memo"]["files"])
         with zipfile.ZipFile(io.BytesIO(chinese)) as archive:
