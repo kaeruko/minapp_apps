@@ -21,6 +21,33 @@
   let loading = false;
   let busy = false;
   let stopped = false;
+  const pages = ['home', 'record', 'history', 'settings'];
+
+  function openPage(page) {
+    if (!pages.includes(page)) throw new Error('Unknown budget page: ' + page);
+    for (const name of pages) {
+      $('page-' + name).hidden = name !== page;
+    }
+    for (const button of document.querySelectorAll('.nav-button')) {
+      const active = button.dataset.view === page;
+      button.classList.toggle('active', active);
+      if (active) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function changeMonth(offset) {
+    if (!Number.isSafeInteger(offset)) throw new TypeError('Month offset must be an integer');
+    const [year, month] = selectedMonth().split('-').map(Number);
+    const target = new Date(year, month - 1 + offset, 1);
+    const targetMonth = B.month(target.getFullYear() + '-' +
+      String(target.getMonth() + 1).padStart(2, '0'));
+    monthInput.value = targetMonth;
+    resetDateForMonth();
+    render();
+    openPage('home');
+  }
 
   function localMonth(now) {
     const y = now.getFullYear();
@@ -59,7 +86,8 @@
     if (!state) return;
     const chosen = selectedMonth();
     const sum = B.summary(state, chosen);
-    $('current-month').textContent = chosen.replace('-', '年') + '月の見通し';
+    $('current-month').textContent = chosen.replace('-', '年') + '月の晩酌予算';
+    $('history-month').textContent = chosen.replace('-', '年') + '月の支出';
     $('visits').textContent = sum.visits === null ? '—' : new Intl.NumberFormat('ja-JP').format(sum.visits);
     $('budget-total').textContent = state.monthlyBudget === null ? '未設定' : yen(state.monthlyBudget);
     $('spent-total').textContent = yen(sum.spent);
@@ -68,10 +96,25 @@
     $('estimate').textContent = sum.remaining === null
       ? '月の予算を設定すると計算できます。'
       : '1回 ' + yen(state.visitCost) + ' として計算。' + (sum.remaining < 0 ? '予算を超えています。' : '');
-    const usage = state.monthlyBudget === null ? 0 : Math.min(100, Math.round(sum.spent * 100 / state.monthlyBudget));
+    const unconfigured = state.monthlyBudget === null;
+    const over = sum.remaining !== null && sum.remaining < 0;
+    const usage = unconfigured ? 0 : Math.min(100, Math.round(sum.spent * 100 / state.monthlyBudget));
+    const remainingAmount = sum.remaining === null ? '—' :
+      (sum.remaining < 0 ? '−' : '') + '¥' +
+      new Intl.NumberFormat('ja-JP').format(Math.abs(sum.remaining));
+    $('ring-remaining').textContent = remainingAmount;
+    $('ring-caption').textContent = unconfigured ? '月の予算を設定してください' :
+      (over ? '予算オーバー' : '今月使える金額');
+    $('budget-ring').style.setProperty('--usage', usage + '%');
+    $('budget-ring').classList.toggle('over', over);
+    $('budget-ring').setAttribute('aria-label', unconfigured
+      ? '予算未設定。支出は' + yen(sum.spent)
+      : '予算' + yen(state.monthlyBudget) + 'のうち' + yen(sum.spent) + 'を使用。残り' + yen(sum.remaining));
     $('progress').setAttribute('aria-valuenow', String(usage));
+    $('progress').setAttribute('aria-valuetext', unconfigured
+      ? '予算未設定' : (over ? '予算を超過しています' : '予算の' + usage + '%を使用'));
     $('progress-fill').style.width = usage + '%';
-    $('progress-fill').classList.toggle('over', sum.remaining !== null && sum.remaining < 0);
+    $('progress-fill').classList.toggle('over', over);
     const list = $('expense-list');
     list.replaceChildren();
     $('no-expenses').hidden = sum.expenses.length > 0;
@@ -156,7 +199,7 @@
     if (!state || busy || stopped) return;
     try {
       const next = B.setBudget(state, B.parseYen(budgetInput.value, '毎月の予算'), B.parseYen(visitInput.value, '1回の目安'));
-      void commit(next, '予算を保存しました');
+      void commit(next, '予算を保存しました', () => openPage('home'));
     } catch (error) {
       show(error.message, true);
     }
@@ -173,6 +216,7 @@
       void commit(next, '支出を記録しました', () => {
         amountInput.value = '';
         noteInput.value = '';
+        openPage('history');
       });
     } catch (error) {
       show(error.message, true);
@@ -182,11 +226,34 @@
     try { resetDateForMonth(); render(); }
     catch (error) { show(error.message, true); }
   });
+  for (const button of document.querySelectorAll('.nav-button')) {
+    button.addEventListener('click', () => openPage(button.dataset.view));
+  }
+  for (const button of document.querySelectorAll('.shortcut')) {
+    button.addEventListener('click', () => {
+      const action = button.dataset.go;
+      if (pages.includes(action)) {
+        openPage(action);
+        return;
+      }
+      try {
+        if (action === 'previous') changeMonth(-1);
+        else if (action === 'next') changeMonth(1);
+        else if (action === 'current') {
+          monthInput.value = localMonth(new Date());
+          resetDateForMonth();
+          render();
+          openPage('home');
+        } else {
+          throw new Error('Unknown budget shortcut: ' + action);
+        }
+      } catch (error) {
+        show(error instanceof Error ? error.message : String(error), true);
+      }
+    });
+  }
   monthInput.value = localMonth(new Date());
   resetDateForMonth();
   window.addEventListener('minappready', () => { void boot(); });
   if (hasBridge()) void boot();
-  else window.setTimeout(() => {
-    if (!state && !loading && !stopped) stop(new Error('みんアプ工房から開いてください。個人保存APIが利用できません'));
-  }, 1800);
 })();
